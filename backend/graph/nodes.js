@@ -520,58 +520,78 @@ const typeSearchNode = async (state) => {
     'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'
   ];
 
-  // Se não for um tipo válido, assume que é nome de Pokémon e processa automaticamente
+  // Verificar se já mostrou uma lista de tipo anteriormente
+  const hasShownTypeList = state.context.lastTypeSearched;
+
+  // Se não for um tipo válido
   if (!validTypes.includes(input)) {
-    console.log('[NODE] typeSearchNode - Input não é tipo válido, processando como Pokémon');
-    
-    try {
-      // Buscar Pokémon diretamente
-      const pokemon = await pokeService.getPokemon(input);
-      const species = await pokeService.getSpecies(pokemon.speciesId);
-
-      const response = botMessages.createPokemonInfoMessage(pokemon, species);
-
-      newState = utils.addMessage(newState, 'assistant', response, pokemon);
-      newState = utils.updateContext(newState, {
-        pokemonData: pokemon,
-        waitingFor: 'next_action',
-        lastError: null
-      });
-      newState = utils.incrementInteraction(newState);
-      newState.userInput = '';
-      newState.currentNode = 'search';
-      return newState;
+    // Se já mostrou lista de tipo, tentar buscar como Pokémon
+    if (hasShownTypeList) {
+      console.log('[NODE] typeSearchNode - Tentando buscar Pokémon após lista de tipo');
       
-    } catch (error) {
-      console.error('[ERROR] typeSearchNode - Erro ao buscar Pokémon:', error.message);
-      
-      let errorMessage = '';
-      if (error.message === 'POKEMON_NOT_FOUND') {
-        try {
-          const suggestions = await pokeService.searchPokemon(input, 5);
-          if (suggestions.length > 0) {
-            errorMessage = botMessages.createPokemonNotFoundWithSuggestions(input, suggestions);
-          } else {
+      try {
+        const pokemon = await pokeService.getPokemon(input);
+        const species = await pokeService.getSpecies(pokemon.speciesId);
+
+        const response = botMessages.createPokemonInfoMessage(pokemon, species);
+
+        newState = utils.addMessage(newState, 'assistant', response, pokemon);
+        newState = utils.updateContext(newState, {
+          pokemonData: pokemon,
+          waitingFor: 'next_action',
+          lastError: null,
+          lastTypeSearched: null // Limpa o contexto de tipo
+        });
+        newState = utils.incrementInteraction(newState);
+        newState.userInput = '';
+        newState.currentNode = 'type_search'; // Permanece em type_search
+        return newState;
+      } catch (error) {
+        console.error('[ERROR] typeSearchNode - Erro ao buscar Pokémon:', error.message);
+        
+        let errorMessage = '';
+        if (error.message === 'POKEMON_NOT_FOUND') {
+          try {
+            const suggestions = await pokeService.searchPokemon(input, 5);
+            if (suggestions.length > 0) {
+              errorMessage = botMessages.createPokemonNotFoundWithSuggestions(input, suggestions);
+            } else {
+              errorMessage = botMessages.createPokemonNotFound(input);
+            }
+          } catch (e) {
             errorMessage = botMessages.createPokemonNotFound(input);
           }
-        } catch (e) {
-          errorMessage = botMessages.createPokemonNotFound(input);
+        } else {
+          errorMessage = botMessages.createGenericError(error.message);
         }
-      } else {
-        errorMessage = botMessages.createGenericError(error.message);
-      }
 
-      newState = utils.addMessage(newState, 'assistant', errorMessage);
-      newState = utils.updateContext(newState, {
-        lastError: error.message,
-        waitingFor: 'pokemon_input'
-      });
-      newState.userInput = '';
-      newState.currentNode = 'search';
-      return newState;
+        newState = utils.addMessage(newState, 'assistant', errorMessage);
+        newState = utils.updateContext(newState, {
+          lastError: error.message,
+          waitingFor: 'pokemon_input'
+        });
+        newState.userInput = '';
+        newState.currentNode = 'type_search';
+        return newState;
+      }
     }
+    
+    // Se não mostrou lista ainda, exigir tipo válido
+    console.log('[NODE] typeSearchNode - Input não é tipo válido');
+    
+    const errorMessage = botMessages.TYPE_SEARCH_INVALID_INPUT(input);
+
+    newState = utils.addMessage(newState, 'assistant', errorMessage);
+    newState = utils.updateContext(newState, {
+      lastError: 'INVALID_TYPE',
+      waitingFor: 'pokemon_input'
+    });
+    newState.userInput = '';
+    newState.currentNode = 'type_search';
+    return newState;
   }
 
+  // Se chegou aqui, é um tipo válido - buscar Pokémon desse tipo
   try {
     const pokemonList = await pokeService.getPokemonByType(input);
 
@@ -580,7 +600,8 @@ const typeSearchNode = async (state) => {
     newState = utils.addMessage(newState, 'assistant', response, pokemonList);
     newState = utils.updateContext(newState, {
       waitingFor: 'next_action',
-      lastError: null
+      lastError: null,
+      lastTypeSearched: input // Marca que mostrou lista de tipo
     });
     newState = utils.incrementInteraction(newState);
     

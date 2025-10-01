@@ -170,7 +170,10 @@ ${pokemonList.slice(0, 15).map((p, i) => `${i + 1}. ${p.name}`).join('\n')}
 ${pokemonList.length > 15 ? `\n... e mais ${pokemonList.length - 15} Pokémon!` : ''}
 
 ---
-Digite o nome de um Pokémon para mais detalhes ou "menu" para voltar.`;
+💡 **Próximos passos:**
+• Digite o **nome ou número** de um Pokémon para ver detalhes
+• Digite outro **tipo** para ver uma nova lista
+• Digite **"menu"** para voltar ao menu principal`;
 
 const TYPE_SEARCH_INVALID = (input) => `
 ❌ Tipo "${input}" não encontrado.
@@ -182,6 +185,17 @@ Tipos válidos incluem:
 • dark, steel, fairy
 
 Tente novamente ou digite "menu" para voltar.`;
+
+const TYPE_SEARCH_INVALID_INPUT = (input) => `
+❌ "${input}" não é um tipo de Pokémon válido.
+
+🏷️ **Tipos válidos:**
+• normal, fire, water, grass, electric
+• ice, fighting, poison, ground, flying
+• psychic, bug, rock, ghost, dragon
+• dark, steel, fairy
+
+Digite um dos tipos acima ou "menu" para voltar ao menu principal.`;
 
 // ============================================
 // MENSAGENS DE FINALIZAÇÃO
@@ -233,6 +247,7 @@ module.exports = {
   // Tipo
   createTypeSearchMessage,
   TYPE_SEARCH_INVALID,
+  TYPE_SEARCH_INVALID_INPUT,
   
   // Finalização
   createEndMessage

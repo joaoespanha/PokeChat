@@ -389,17 +389,17 @@ describe('Nodes', () => {
       )).toBe(true);
     });
 
-    test('deve tratar tipo inválido redirecionando para search', async () => {
+    test('deve tratar tipo inválido permanecendo em type_search', async () => {
       let state = createInitialState();
       state.userInput = 'tipoinvalido';
       
       const newState = await nodes.type_search(state);
       
-      // Agora processa automaticamente como Pokémon e limpa o input
-      expect(newState.currentNode).toBe('search');
+      // Deve permanecer em type_search quando não encontra o tipo/Pokemon
+      expect(newState.currentNode).toBe('type_search');
       expect(newState.userInput).toBe('');
       expect(newState.messages.some(m => 
-        m.content.includes('tipoinvalido') || m.content.includes('não encontrado')
+        m.content.includes('tipo de Pokémon válido') || m.content.includes('Tipos válidos')
       )).toBe(true);
     });
 
@@ -415,16 +415,146 @@ describe('Nodes', () => {
       )).toBe(true);
     });
 
-    test('deve redirecionar para search quando input não é tipo válido', async () => {
+    test('deve permanecer em type_search quando input não é tipo válido e Pokemon não existe', async () => {
       let state = createInitialState();
       state.userInput = 'tangela';
       
       const newState = await nodes.type_search(state);
       
-      expect(newState.currentNode).toBe('search');
+      // Deve permanecer em type_search quando não encontra o tipo nem o Pokemon
+      expect(newState.currentNode).toBe('type_search');
       expect(newState.userInput).toBe('');
       expect(newState.messages.some(m => 
-        m.content.includes('tangela') || m.content.includes('Tangela')
+        m.content.includes('tipo de Pokémon válido') || m.content.includes('Tipos válidos')
+      )).toBe(true);
+    });
+
+    // Testes da funcionalidade de busca em 2 etapas (tipo -> pokemon)
+    test('deve definir lastTypeSearched após mostrar lista de tipo', async () => {
+      let state = createInitialState();
+      state.userInput = 'dragon';
+      
+      const newState = await nodes.type_search(state);
+      
+      expect(newState.context.lastTypeSearched).toBe('dragon');
+      expect(newState.messages.some(m => 
+        m.content.includes('Pokémon do tipo DRAGON')
+      )).toBe(true);
+    });
+
+    test('deve permitir busca de Pokemon por nome após mostrar tipo', async () => {
+      let state = createInitialState();
+      
+      // Primeiro mostrar lista de tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('electric');
+      
+      // Agora buscar Pokemon por nome
+      state.userInput = 'pikachu';
+      state = await nodes.type_search(state);
+      
+      expect(state.messages.some(m => 
+        m.content.includes('Pikachu')
+      )).toBe(true);
+      expect(state.context.lastTypeSearched).toBe(null); // Limpa após buscar
+    });
+
+    test('deve permitir busca de Pokemon por número após mostrar tipo', async () => {
+      let state = createInitialState();
+      
+      // Primeiro mostrar lista de tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('electric');
+      
+      // Agora buscar Pokemon por número
+      state.userInput = '25';
+      state = await nodes.type_search(state);
+      
+      expect(state.messages.some(m => 
+        m.content.includes('Pikachu') || m.content.includes('pikachu')
+      )).toBe(true);
+      expect(state.context.lastTypeSearched).toBe(null); // Limpa após buscar
+    });
+
+    test('deve limpar lastTypeSearched após buscar Pokemon', async () => {
+      let state = createInitialState();
+      
+      // Mostrar tipo e buscar Pokemon
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      state.userInput = 'pikachu';
+      state = await nodes.type_search(state);
+      
+      expect(state.context.lastTypeSearched).toBe(null);
+    });
+
+    test('deve rejeitar Pokemon sem lastTypeSearched', async () => {
+      let state = createInitialState();
+      // Não definir lastTypeSearched
+      
+      state.userInput = 'pikachu';
+      const newState = await nodes.type_search(state);
+      
+      expect(newState.messages.some(m => 
+        m.content.includes('não é um tipo de Pokémon válido')
+      )).toBe(true);
+      expect(newState.currentNode).toBe('type_search');
+    });
+
+    test('deve permitir buscar outro tipo após mostrar lista', async () => {
+      let state = createInitialState();
+      
+      // Mostrar primeiro tipo
+      state.userInput = 'dragon';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('dragon');
+      
+      // Buscar outro tipo
+      state.userInput = 'fire';
+      state = await nodes.type_search(state);
+      
+      expect(state.context.lastTypeSearched).toBe('fire');
+      expect(state.messages.some(m => 
+        m.content.includes('Pokémon do tipo FIRE')
+      )).toBe(true);
+    });
+
+    test('deve mostrar erro com sugestões quando Pokemon não encontrado após tipo', async () => {
+      let state = createInitialState();
+      
+      // Mostrar tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      
+      // Tentar buscar Pokemon inexistente
+      state.userInput = 'pikach'; // typo
+      state = await nodes.type_search(state);
+      
+      expect(state.messages.some(m => 
+        m.content.includes('não encontrado') && m.content.includes('pikachu')
+      )).toBe(true);
+    });
+
+    test('fluxo completo: tipo -> pokemon -> rejeitar input inválido', async () => {
+      let state = createInitialState();
+      
+      // Passo 1: Mostrar tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('electric');
+      
+      // Passo 2: Buscar Pokemon
+      state.userInput = 'pikachu';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe(null);
+      
+      // Passo 3: Tentar input inválido (deve rejeitar)
+      state.userInput = 'invalido';
+      state = await nodes.type_search(state);
+      expect(state.messages.some(m => 
+        m.content.includes('não é um tipo de Pokémon válido')
       )).toBe(true);
     });
   });
