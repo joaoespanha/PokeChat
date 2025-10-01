@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@langchain/langgraph": "^0.0.26",
+    "cors": "^2.8.5",
     "express": "^5.1.0"
   },
   "devDependencies": {

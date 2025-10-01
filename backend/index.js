@@ -3,10 +3,17 @@
  */
 
 const express = require('express');
+const cors = require('cors');
 const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Middleware CORS - permite requisições do frontend
+app.use(cors({
+  origin: 'http://localhost:5173', // URL do frontend Vite
+  credentials: true
+}));
 
 // Middleware para parse de JSON
 app.use(express.json());
