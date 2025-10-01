@@ -12,6 +12,9 @@ const {
     incrementInteraction,
     setUserInput,
     transitionTo,
+    transitionToWithHistory,
+    goBack,
+    canGoBack,
     setError,
     clearError,
     getSessionDuration,
@@ -475,6 +478,193 @@ const {
         const stats = getStats(state);
         expect(stats.interactions).toBe(2);
         expect(stats.messages).toBe(4);
+      });
+    });
+
+    // ============================================
+    // Testes das Funções de Navegação (Voltar)
+    // ============================================
+    describe('Funções de Navegação', () => {
+      
+      test('transitionToWithHistory deve adicionar nó atual ao histórico', () => {
+        let state = createInitialState();
+        state.currentNode = NODE_TYPES.MENU;
+        
+        state = transitionToWithHistory(state, NODE_TYPES.SEARCH);
+        
+        expect(state.currentNode).toBe(NODE_TYPES.SEARCH);
+        expect(state.navigationHistory).toContain(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toHaveLength(1);
+      });
+
+      test('transitionToWithHistory não deve adicionar START ao histórico', () => {
+        let state = createInitialState();
+        expect(state.currentNode).toBe(NODE_TYPES.START);
+        
+        state = transitionToWithHistory(state, NODE_TYPES.MENU);
+        
+        expect(state.currentNode).toBe(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([]);
+      });
+
+      test('transitionToWithHistory não deve modificar histórico se permanecer no mesmo nó', () => {
+        let state = createInitialState();
+        state.currentNode = NODE_TYPES.MENU;
+        state.navigationHistory = [NODE_TYPES.SEARCH];
+        
+        state = transitionToWithHistory(state, NODE_TYPES.MENU);
+        
+        expect(state.currentNode).toBe(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([NODE_TYPES.SEARCH]);
+      });
+
+      test('transitionToWithHistory deve manter múltiplos nós no histórico', () => {
+        let state = createInitialState();
+        
+        state.currentNode = NODE_TYPES.MENU;
+        state = transitionToWithHistory(state, NODE_TYPES.SEARCH);
+        
+        state = transitionToWithHistory(state, NODE_TYPES.EVOLUTION);
+        
+        expect(state.navigationHistory).toEqual([NODE_TYPES.MENU, NODE_TYPES.SEARCH]);
+      });
+
+      test('canGoBack deve retornar false quando histórico está vazio', () => {
+        const state = createInitialState();
+        
+        expect(canGoBack(state)).toBe(false);
+      });
+
+      test('canGoBack deve retornar true quando há histórico', () => {
+        let state = createInitialState();
+        state.navigationHistory = [NODE_TYPES.MENU];
+        
+        expect(canGoBack(state)).toBe(true);
+      });
+
+      test('goBack deve voltar ao nó anterior e remover do histórico', () => {
+        let state = createInitialState();
+        state.currentNode = NODE_TYPES.SEARCH;
+        state.navigationHistory = [NODE_TYPES.MENU];
+        
+        state = goBack(state);
+        
+        expect(state.currentNode).toBe(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([]);
+      });
+
+      test('goBack deve limpar userInput', () => {
+        let state = createInitialState();
+        state.currentNode = NODE_TYPES.SEARCH;
+        state.navigationHistory = [NODE_TYPES.MENU];
+        state.userInput = 'pikachu';
+        
+        state = goBack(state);
+        
+        expect(state.userInput).toBe('');
+      });
+
+      test('goBack deve retornar estado inalterado se não há histórico', () => {
+        let state = createInitialState();
+        state.currentNode = NODE_TYPES.MENU;
+        state.navigationHistory = [];
+        
+        const newState = goBack(state);
+        
+        expect(newState.currentNode).toBe(NODE_TYPES.MENU);
+        expect(newState.navigationHistory).toEqual([]);
+      });
+
+      test('goBack deve funcionar com múltiplos níveis de histórico', () => {
+        let state = createInitialState();
+        state.currentNode = NODE_TYPES.EVOLUTION;
+        state.navigationHistory = [NODE_TYPES.MENU, NODE_TYPES.SEARCH];
+        
+        state = goBack(state);
+        
+        expect(state.currentNode).toBe(NODE_TYPES.SEARCH);
+        expect(state.navigationHistory).toEqual([NODE_TYPES.MENU]);
+      });
+
+      test('goBack deve retornar novo estado (imutabilidade)', () => {
+        const originalState = createInitialState();
+        originalState.currentNode = NODE_TYPES.SEARCH;
+        originalState.navigationHistory = [NODE_TYPES.MENU];
+        
+        const newState = goBack(originalState);
+        
+        expect(newState).not.toBe(originalState);
+        expect(originalState.currentNode).toBe(NODE_TYPES.SEARCH);
+        expect(originalState.navigationHistory).toEqual([NODE_TYPES.MENU]);
+      });
+
+      test('navigationHistory deve estar presente no estado inicial', () => {
+        const state = createInitialState();
+        
+        expect(state).toHaveProperty('navigationHistory');
+        expect(Array.isArray(state.navigationHistory)).toBe(true);
+        expect(state.navigationHistory).toEqual([]);
+      });
+    });
+
+    // ============================================
+    // Testes de Integração com Navegação
+    // ============================================
+    describe('Fluxo Completo com Navegação', () => {
+      
+      test('deve simular navegação completa com voltar', () => {
+        let state = createInitialState();
+        
+        // Start -> Menu (sem adicionar ao histórico)
+        state = transitionToWithHistory(state, NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([]);
+        
+        // Menu -> Search
+        state = transitionToWithHistory(state, NODE_TYPES.SEARCH);
+        expect(state.navigationHistory).toEqual([NODE_TYPES.MENU]);
+        expect(canGoBack(state)).toBe(true);
+        
+        // Voltar: Search -> Menu
+        state = goBack(state);
+        expect(state.currentNode).toBe(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([]);
+        expect(canGoBack(state)).toBe(false);
+        
+        // Menu -> Compare
+        state = transitionToWithHistory(state, NODE_TYPES.COMPARE);
+        expect(state.navigationHistory).toEqual([NODE_TYPES.MENU]);
+        
+        // Voltar: Compare -> Menu
+        state = goBack(state);
+        expect(state.currentNode).toBe(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([]);
+      });
+
+      test('deve manter histórico correto em navegação profunda', () => {
+        let state = createInitialState();
+        
+        // Navegar: Start -> Menu -> Search -> Evolution
+        state.currentNode = NODE_TYPES.MENU;
+        state = transitionToWithHistory(state, NODE_TYPES.SEARCH);
+        state = transitionToWithHistory(state, NODE_TYPES.EVOLUTION);
+        state = transitionToWithHistory(state, NODE_TYPES.COMPARE);
+        
+        expect(state.navigationHistory).toEqual([
+          NODE_TYPES.MENU,
+          NODE_TYPES.SEARCH,
+          NODE_TYPES.EVOLUTION
+        ]);
+        
+        // Voltar 3 vezes
+        state = goBack(state); // Compare -> Evolution
+        expect(state.currentNode).toBe(NODE_TYPES.EVOLUTION);
+        
+        state = goBack(state); // Evolution -> Search
+        expect(state.currentNode).toBe(NODE_TYPES.SEARCH);
+        
+        state = goBack(state); // Search -> Menu
+        expect(state.currentNode).toBe(NODE_TYPES.MENU);
+        expect(state.navigationHistory).toEqual([]);
       });
     });
   });

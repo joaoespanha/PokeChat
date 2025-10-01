@@ -4,6 +4,8 @@
  */
 
 const PokeAPIService = require('../services/pokeapi');
+const botMessages = require('./botMessages');
+const { canGoBack, goBack } = require('./stateSchema');
 
 // Inicializar serviço
 const pokeService = new PokeAPIService();
@@ -15,6 +17,7 @@ const initialState = {
   messages: [],           // Histórico de mensagens
   userInput: '',          // Última entrada do usuário
   currentNode: 'start',   // Nó atual
+  navigationHistory: [],  // Histórico de navegação para "voltar"
   context: {              // Contexto da conversa
     pokemonData: null,
     comparisonData: [],
@@ -98,6 +101,39 @@ const utils = {
   isValidPokemonId(input) {
     const num = parseInt(input);
     return !isNaN(num) && num > 0 && num <= 1010; // Total de Pokémon até Gen 9
+  },
+
+  /**
+   * Verifica se o usuário digitou "voltar" e trata a navegação
+   * Retorna o estado atualizado e um flag indicando se foi processado
+   */
+  handleVoltarCommand(state, input) {
+    const lowerInput = input.toLowerCase().trim();
+    
+    // Verifica se o usuário digitou "voltar"
+    if (lowerInput === 'voltar') {
+      // Verifica se pode voltar (tem histórico)
+      if (canGoBack(state)) {
+        // Adiciona mensagem do usuário
+        let newState = this.addMessage(state, 'user', input);
+        // Volta ao nó anterior (remove do histórico e muda currentNode)
+        newState = goBack(newState);
+        newState = this.incrementInteraction(newState);
+        // Marca para re-executar o nó anterior
+        return { state: newState, handled: true, shouldReExecute: true };
+      } else {
+        // Está no início, não pode voltar
+        let newState = this.addMessage(state, 'user', input);
+        newState = this.addMessage(newState, 'assistant', botMessages.VOLTAR_AT_START);
+        newState = this.incrementInteraction(newState);
+        // Limpa o input para não processar novamente
+        newState.userInput = '';
+        return { state: newState, handled: true, shouldReExecute: false };
+      }
+    }
+    
+    // Não é comando "voltar"
+    return { state, handled: false, shouldReExecute: false };
   }
 };
 
@@ -107,20 +143,7 @@ const utils = {
 const startNode = async (state) => {
   console.log('[NODE] startNode - Iniciando conversa');
 
-  const welcomeMessage = `
-🎮 **Bem-vindo ao PokéDex Assistant!**
-
-Olá, Treinador! Eu sou seu assistente pessoal do mundo Pokémon. 
-
-Posso te ajudar a:
-1️⃣ Buscar informações de qualquer Pokémon
-2️⃣ Comparar dois Pokémon lado a lado
-3️⃣ Ver cadeias de evolução
-4️⃣ Buscar Pokémon por tipo
-
-Digite o **número da opção** ou me diga o que você quer fazer!`;
-
-  let newState = utils.addMessage(state, 'assistant', welcomeMessage);
+  let newState = utils.addMessage(state, 'assistant', botMessages.WELCOME_MESSAGE);
   newState = utils.updateContext(newState, { 
     waitingFor: 'menu_choice',
     lastError: null 
@@ -148,6 +171,18 @@ const menuNode = async (state) => {
     };
   }
 
+  // Verificar comando "voltar"
+  const voltarResult = utils.handleVoltarCommand(state, input);
+  if (voltarResult.handled) {
+    // Se deve re-executar, mostrar mensagem de boas-vindas novamente
+    if (voltarResult.shouldReExecute) {
+      const welcomeState = utils.addMessage(voltarResult.state, 'assistant', botMessages.WELCOME_MESSAGE);
+      welcomeState.userInput = '';
+      return welcomeState;
+    }
+    return voltarResult.state;
+  }
+
   // Detectar intenção do usuário
   let nextNode = 'menu';
   let responseMessage = '';
@@ -155,40 +190,31 @@ const menuNode = async (state) => {
   // Opção 1: Buscar Pokémon
   if (input.includes('1') || input.includes('buscar') || input.includes('procurar') || input.includes('informação')) {
     nextNode = 'search';
-    responseMessage = '🔍 **Buscar Pokémon**\n\nDigite o nome ou número do Pokémon que você quer conhecer!\nExemplo: "Pikachu" ou "25"';
+    responseMessage = botMessages.MENU_SEARCH_OPTION;
   }
   // Opção 2: Comparar
   else if (input.includes('2') || input.includes('comparar') || input.includes('comparação')) {
     nextNode = 'compare';
-    responseMessage = '⚖️ **Comparar Pokémon**\n\nDigite o nome ou número de dois Pokémon separados por vírgula.\nExemplo: "Charizard, Blastoise" ou "6, 9"';
+    responseMessage = botMessages.MENU_COMPARE_OPTION;
   }
   // Opção 3: Evolução
   else if (input.includes('3') || input.includes('evolução') || input.includes('evoluir')) {
     nextNode = 'evolution';
-    responseMessage = '🔄 **Cadeia de Evolução**\n\nDigite o nome ou número do Pokémon para ver sua linha evolutiva completa!';
+    responseMessage = botMessages.MENU_EVOLUTION_OPTION;
   }
   // Opção 4: Por tipo
   else if (input.includes('4') || input.includes('tipo') || input.includes('type')) {
     nextNode = 'type_search';
-    responseMessage = '🏷️ **Buscar por Tipo**\n\nDigite o tipo de Pokémon que procura:\n(fire, water, grass, electric, psychic, dragon, etc.)';
+    responseMessage = botMessages.MENU_TYPE_OPTION;
   }
   // Opção de sair
   else if (input.includes('sair') || input.includes('tchau') || input.includes('bye')) {
     nextNode = 'end';
-    responseMessage = '👋 Até logo, Treinador! Foi ótimo te ajudar na sua jornada Pokémon!';
+    responseMessage = botMessages.MENU_EXIT_MESSAGE;
   }
   // Entrada inválida
   else {
-    responseMessage = `
-❌ Desculpe, não entendi sua escolha.
-
-Por favor, escolha uma das opções:
-1️⃣ Buscar Pokémon
-2️⃣ Comparar Pokémon
-3️⃣ Ver Evolução
-4️⃣ Buscar por Tipo
-
-Ou digite "sair" para encerrar.`;
+    responseMessage = botMessages.MENU_INVALID_CHOICE;
   }
 
   let newState = utils.addMessage(state, 'user', state.userInput);
@@ -200,6 +226,11 @@ Ou digite "sair" para encerrar.`;
   
   // Limpa o input após processar a escolha do menu
   newState.userInput = '';
+  
+  // Adiciona ao histórico se estiver mudando de nó
+  if (nextNode !== 'menu' && nextNode !== state.currentNode) {
+    newState.navigationHistory = [...newState.navigationHistory, state.currentNode];
+  }
   newState.currentNode = nextNode;
 
   return newState;
@@ -212,12 +243,31 @@ const searchNode = async (state) => {
   console.log('[NODE] searchNode - Buscando Pokémon');
 
   const input = state.userInput.trim().toLowerCase();
+  
+  // Verificar comando "voltar" antes de processar
+  const voltarResult = utils.handleVoltarCommand(state, input);
+  if (voltarResult.handled) {
+    // Se deve re-executar, mostrar mensagem do nó de destino
+    if (voltarResult.shouldReExecute) {
+      // Se voltou para o menu, mostrar boas-vindas
+      if (voltarResult.state.currentNode === 'menu') {
+        const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.WELCOME_MESSAGE);
+        messageState.userInput = '';
+        return messageState;
+      }
+      // Outros nós mostram suas mensagens específicas
+      const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.MENU_SEARCH_OPTION);
+      messageState.userInput = '';
+      return messageState;
+    }
+    return voltarResult.state;
+  }
+
   let newState = utils.addMessage(state, 'user', input);
 
   // Verificar comandos especiais antes de buscar Pokémon
   if (input.includes('menu')) {
-    const response = '📋 Voltando ao menu principal...';
-    newState = utils.addMessage(newState, 'assistant', response);
+    newState = utils.addMessage(newState, 'assistant', botMessages.BACK_TO_MENU);
     newState = utils.incrementInteraction(newState);
     newState.userInput = '';
     newState.currentNode = 'menu';
@@ -225,8 +275,7 @@ const searchNode = async (state) => {
   }
   
   if (input.includes('evol')) {
-    const response = '🔄 Indo para visualização de evolução...';
-    newState = utils.addMessage(newState, 'assistant', response);
+    newState = utils.addMessage(newState, 'assistant', botMessages.GOING_TO_EVOLUTION);
     newState = utils.incrementInteraction(newState);
     newState.userInput = '';
     newState.currentNode = 'evolution';
@@ -240,28 +289,7 @@ const searchNode = async (state) => {
     // Buscar informações da espécie
     const species = await pokeService.getSpecies(pokemon.speciesId);
 
-    const response = `
-✨ **${pokemon.nameCapitalized}** #${pokemon.id}
-
-📝 ${species.description}
-
-🏷️ **Tipo(s):** ${pokemon.types.map(t => t.toUpperCase()).join(', ')}
-📏 **Altura:** ${pokemon.height}m
-⚖️ **Peso:** ${pokemon.weight}kg
-
-${utils.formatStats(pokemon.stats)}
-
-💫 **Habilidades:**
-${pokemon.abilities.map(a => `• ${a.name}${a.isHidden ? ' (oculta)' : ''}`).join('\n')}
-
-${species.isLegendary ? '👑 **Pokémon Lendário!**' : ''}
-${species.isMythical ? '✨ **Pokémon Mítico!**' : ''}
-
----
-O que você quer fazer agora?
-• Digite outro Pokémon para buscar
-• Digite "evoluir" para ver a cadeia evolutiva
-• Digite "menu" para voltar ao menu principal`;
+    const response = botMessages.createPokemonInfoMessage(pokemon, species);
 
     newState = utils.addMessage(newState, 'assistant', response, pokemon);
     newState = utils.updateContext(newState, {
@@ -285,21 +313,15 @@ O que você quer fazer agora?
       try {
         const suggestions = await pokeService.searchPokemon(input, 5);
         if (suggestions.length > 0) {
-          errorMessage = `
-❌ Pokémon "${input}" não encontrado.
-
-🤔 Você quis dizer:
-${suggestions.map(s => `• ${s}`).join('\n')}
-
-Tente novamente ou digite "menu" para voltar.`;
+          errorMessage = botMessages.createPokemonNotFoundWithSuggestions(input, suggestions);
         } else {
-          errorMessage = `❌ Pokémon "${input}" não encontrado.\n\nTente outro nome ou número, ou digite "menu" para voltar.`;
+          errorMessage = botMessages.createPokemonNotFound(input);
         }
       } catch (e) {
-        errorMessage = `❌ Pokémon "${input}" não encontrado.\n\nTente outro nome ou número, ou digite "menu" para voltar.`;
+        errorMessage = botMessages.createPokemonNotFound(input);
       }
     } else {
-      errorMessage = `❌ Erro ao buscar Pokémon: ${error.message}\n\nTente novamente ou digite "menu" para voltar.`;
+      errorMessage = botMessages.createGenericError(error.message);
     }
 
     newState = utils.addMessage(newState, 'assistant', errorMessage);
@@ -323,6 +345,25 @@ const compareNode = async (state) => {
   console.log('[NODE] compareNode - Comparando Pokémon');
 
   const input = state.userInput.trim();
+  
+  // Verificar comando "voltar" antes de processar
+  const voltarResult = utils.handleVoltarCommand(state, input);
+  if (voltarResult.handled) {
+    // Se deve re-executar, mostrar mensagem do nó de destino
+    if (voltarResult.shouldReExecute) {
+      // Se voltou para o menu, mostrar boas-vindas
+      if (voltarResult.state.currentNode === 'menu') {
+        const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.WELCOME_MESSAGE);
+        messageState.userInput = '';
+        return messageState;
+      }
+      const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.MENU_COMPARE_OPTION);
+      messageState.userInput = '';
+      return messageState;
+    }
+    return voltarResult.state;
+  }
+
   let newState = utils.addMessage(state, 'user', input);
 
   try {
@@ -330,40 +371,13 @@ const compareNode = async (state) => {
     const parts = input.split(',').map(p => p.trim()).filter(p => p);
 
     if (parts.length !== 2) {
-      throw new Error('Por favor, forneça dois Pokémon separados por vírgula.\nExemplo: "Pikachu, Raichu"');
+      throw new Error(botMessages.createCompareInstructionError());
     }
 
     // Buscar ambos os Pokémon
     const [pokemon1, pokemon2] = await pokeService.getMultiplePokemon(parts);
 
-    const response = `
-⚖️ **Comparação: ${pokemon1.nameCapitalized} vs ${pokemon2.nameCapitalized}**
-
-╔════════════════╦══════════╦══════════╗
-║ **Estatística**    ║ **${pokemon1.nameCapitalized}** ║ **${pokemon2.nameCapitalized}** ║
-╠════════════════╬══════════╬══════════╣
-║ HP             ║ ${String(pokemon1.stats.hp).padEnd(8)} ║ ${String(pokemon2.stats.hp).padEnd(8)} ║
-║ Ataque         ║ ${String(pokemon1.stats.attack).padEnd(8)} ║ ${String(pokemon2.stats.attack).padEnd(8)} ║
-║ Defesa         ║ ${String(pokemon1.stats.defense).padEnd(8)} ║ ${String(pokemon2.stats.defense).padEnd(8)} ║
-║ Atq. Especial  ║ ${String(pokemon1.stats.specialAttack).padEnd(8)} ║ ${String(pokemon2.stats.specialAttack).padEnd(8)} ║
-║ Def. Especial  ║ ${String(pokemon1.stats.specialDefense).padEnd(8)} ║ ${String(pokemon2.stats.specialDefense).padEnd(8)} ║
-║ Velocidade     ║ ${String(pokemon1.stats.speed).padEnd(8)} ║ ${String(pokemon2.stats.speed).padEnd(8)} ║
-╠════════════════╬══════════╬══════════╣
-║ **TOTAL**          ║ **${String(pokemon1.stats.total).padEnd(8)}** ║ **${String(pokemon2.stats.total).padEnd(8)}** ║
-╚════════════════╩══════════╩══════════╝
-
-🏷️ **Tipos:**
-• ${pokemon1.nameCapitalized}: ${pokemon1.types.join(', ')}
-• ${pokemon2.nameCapitalized}: ${pokemon2.types.join(', ')}
-
-${pokemon1.stats.total > pokemon2.stats.total 
-  ? `🏆 ${pokemon1.nameCapitalized} tem stats totais superiores!` 
-  : pokemon1.stats.total < pokemon2.stats.total 
-    ? `🏆 ${pokemon2.nameCapitalized} tem stats totais superiores!`
-    : `⚖️ Ambos têm stats totais iguais!`}
-
----
-Digite "menu" para voltar ou compare outros Pokémon!`;
+    const response = botMessages.createComparisonMessage(pokemon1, pokemon2);
 
     newState = utils.addMessage(newState, 'assistant', response, { pokemon1, pokemon2 });
     newState = utils.updateContext(newState, {
@@ -380,7 +394,7 @@ Digite "menu" para voltar ou compare outros Pokémon!`;
   } catch (error) {
     console.error('[ERROR] compareNode:', error.message);
 
-    const errorMessage = `❌ ${error.message}\n\nTente novamente ou digite "menu" para voltar.`;
+    const errorMessage = botMessages.createCompareError(error.message);
     
     newState = utils.addMessage(newState, 'assistant', errorMessage);
     newState = utils.updateContext(newState, {
@@ -403,6 +417,25 @@ const evolutionNode = async (state) => {
   console.log('[NODE] evolutionNode - Buscando evolução');
 
   const input = state.userInput.trim();
+  
+  // Verificar comando "voltar" antes de processar
+  const voltarResult = utils.handleVoltarCommand(state, input);
+  if (voltarResult.handled) {
+    // Se deve re-executar, mostrar mensagem do nó de destino
+    if (voltarResult.shouldReExecute) {
+      // Se voltou para o menu, mostrar boas-vindas
+      if (voltarResult.state.currentNode === 'menu') {
+        const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.WELCOME_MESSAGE);
+        messageState.userInput = '';
+        return messageState;
+      }
+      const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.MENU_EVOLUTION_OPTION);
+      messageState.userInput = '';
+      return messageState;
+    }
+    return voltarResult.state;
+  }
+
   let newState = utils.addMessage(state, 'user', input);
 
   try {
@@ -411,18 +444,7 @@ const evolutionNode = async (state) => {
     const species = await pokeService.getSpecies(pokemon.speciesId);
     const evolutionChain = await pokeService.getEvolutionChain(species.evolutionChainId);
 
-    const response = `
-🔄 **Cadeia Evolutiva de ${pokemon.nameCapitalized}**
-
-${evolutionChain.map((evo, index) => {
-  const arrow = index < evolutionChain.length - 1 ? ' ➡️ ' : '';
-  return `**${evo.nameCapitalized}**${arrow}`;
-}).join('')}
-
-📊 Total de formas: ${evolutionChain.length}
-
----
-Digite outro Pokémon ou "menu" para voltar.`;
+    const response = botMessages.createEvolutionMessage(pokemon, evolutionChain);
 
     newState = utils.addMessage(newState, 'assistant', response, evolutionChain);
     newState = utils.updateContext(newState, {
@@ -439,7 +461,7 @@ Digite outro Pokémon ou "menu" para voltar.`;
   } catch (error) {
     console.error('[ERROR] evolutionNode:', error.message);
 
-    const errorMessage = `❌ Erro ao buscar evolução: ${error.message}\n\nTente novamente ou digite "menu" para voltar.`;
+    const errorMessage = botMessages.createEvolutionError(error.message);
     
     newState = utils.addMessage(newState, 'assistant', errorMessage);
     newState = utils.updateContext(newState, {
@@ -461,12 +483,30 @@ const typeSearchNode = async (state) => {
   console.log('[NODE] typeSearchNode - Buscando por tipo');
 
   const input = state.userInput.trim().toLowerCase();
+  
+  // Verificar comando "voltar" antes de processar
+  const voltarResult = utils.handleVoltarCommand(state, input);
+  if (voltarResult.handled) {
+    // Se deve re-executar, mostrar mensagem do nó de destino
+    if (voltarResult.shouldReExecute) {
+      // Se voltou para o menu, mostrar boas-vindas
+      if (voltarResult.state.currentNode === 'menu') {
+        const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.WELCOME_MESSAGE);
+        messageState.userInput = '';
+        return messageState;
+      }
+      const messageState = utils.addMessage(voltarResult.state, 'assistant', botMessages.MENU_TYPE_OPTION);
+      messageState.userInput = '';
+      return messageState;
+    }
+    return voltarResult.state;
+  }
+
   let newState = utils.addMessage(state, 'user', input);
 
   // Verificar comandos especiais antes de buscar por tipo
   if (input.includes('menu')) {
-    const response = '📋 Voltando ao menu principal...';
-    newState = utils.addMessage(newState, 'assistant', response);
+    newState = utils.addMessage(newState, 'assistant', botMessages.BACK_TO_MENU);
     newState = utils.incrementInteraction(newState);
     newState.userInput = '';
     newState.currentNode = 'menu';
@@ -489,28 +529,7 @@ const typeSearchNode = async (state) => {
       const pokemon = await pokeService.getPokemon(input);
       const species = await pokeService.getSpecies(pokemon.speciesId);
 
-      const response = `
-✨ **${pokemon.nameCapitalized}** #${pokemon.id}
-
-📝 ${species.description}
-
-🏷️ **Tipo(s):** ${pokemon.types.map(t => t.toUpperCase()).join(', ')}
-📏 **Altura:** ${pokemon.height}m
-⚖️ **Peso:** ${pokemon.weight}kg
-
-${utils.formatStats(pokemon.stats)}
-
-💫 **Habilidades:**
-${pokemon.abilities.map(a => `• ${a.name}${a.isHidden ? ' (oculta)' : ''}`).join('\n')}
-
-${species.isLegendary ? '👑 **Pokémon Lendário!**' : ''}
-${species.isMythical ? '✨ **Pokémon Mítico!**' : ''}
-
----
-O que você quer fazer agora?
-• Digite outro Pokémon para buscar
-• Digite "evoluir" para ver a cadeia evolutiva
-• Digite "menu" para voltar ao menu principal`;
+      const response = botMessages.createPokemonInfoMessage(pokemon, species);
 
       newState = utils.addMessage(newState, 'assistant', response, pokemon);
       newState = utils.updateContext(newState, {
@@ -531,21 +550,15 @@ O que você quer fazer agora?
         try {
           const suggestions = await pokeService.searchPokemon(input, 5);
           if (suggestions.length > 0) {
-            errorMessage = `
-❌ Pokémon "${input}" não encontrado.
-
-🤔 Você quis dizer:
-${suggestions.map(s => `• ${s}`).join('\n')}
-
-Tente novamente ou digite "menu" para voltar.`;
+            errorMessage = botMessages.createPokemonNotFoundWithSuggestions(input, suggestions);
           } else {
-            errorMessage = `❌ Pokémon "${input}" não encontrado.\n\nTente outro nome ou número, ou digite "menu" para voltar.`;
+            errorMessage = botMessages.createPokemonNotFound(input);
           }
         } catch (e) {
-          errorMessage = `❌ Pokémon "${input}" não encontrado.\n\nTente outro nome ou número, ou digite "menu" para voltar.`;
+          errorMessage = botMessages.createPokemonNotFound(input);
         }
       } else {
-        errorMessage = `❌ Erro ao buscar Pokémon: ${error.message}\n\nTente novamente ou digite "menu" para voltar.`;
+        errorMessage = botMessages.createGenericError(error.message);
       }
 
       newState = utils.addMessage(newState, 'assistant', errorMessage);
@@ -562,15 +575,7 @@ Tente novamente ou digite "menu" para voltar.`;
   try {
     const pokemonList = await pokeService.getPokemonByType(input);
 
-    const response = `
-🏷️ **Pokémon do tipo ${input.toUpperCase()}**
-
-${pokemonList.slice(0, 15).map((p, i) => `${i + 1}. ${p.name}`).join('\n')}
-
-${pokemonList.length > 15 ? `\n... e mais ${pokemonList.length - 15} Pokémon!` : ''}
-
----
-Digite o nome de um Pokémon para mais detalhes ou "menu" para voltar.`;
+    const response = botMessages.createTypeSearchMessage(input, pokemonList);
 
     newState = utils.addMessage(newState, 'assistant', response, pokemonList);
     newState = utils.updateContext(newState, {
@@ -586,16 +591,7 @@ Digite o nome de um Pokémon para mais detalhes ou "menu" para voltar.`;
   } catch (error) {
     console.error('[ERROR] typeSearchNode:', error.message);
 
-    const errorMessage = `
-❌ Tipo "${input}" não encontrado.
-
-Tipos válidos incluem:
-• normal, fire, water, grass, electric
-• ice, fighting, poison, ground, flying
-• psychic, bug, rock, ghost, dragon
-• dark, steel, fairy
-
-Tente novamente ou digite "menu" para voltar.`;
+    const errorMessage = botMessages.TYPE_SEARCH_INVALID(input);
     
     newState = utils.addMessage(newState, 'assistant', errorMessage);
     newState = utils.updateContext(newState, {
@@ -620,15 +616,7 @@ const endNode = async (state) => {
   const minutes = Math.floor(sessionDuration / 60000);
   const seconds = Math.floor((sessionDuration % 60000) / 1000);
 
-  const response = `
-👋 **Até logo, Treinador!**
-
-📊 **Resumo da sessão:**
-• Interações: ${state.metadata.interactionCount}
-• Duração: ${minutes}m ${seconds}s
-
-Obrigado por usar o PokéDex Assistant! 
-Volte sempre que precisar de ajuda na sua jornada Pokémon! 🎮✨`;
+  const response = botMessages.createEndMessage(state.metadata.interactionCount, minutes, seconds);
 
   let newState = utils.addMessage(state, 'assistant', response);
   newState.currentNode = 'end';
