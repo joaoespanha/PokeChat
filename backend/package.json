@@ -12,12 +12,14 @@
     "test:manual": "node test-pokeapi.js"
   },
   "keywords": ["pokemon", "chatbot", "pokeapi", "backend"],
-  "author": "",
+  "author": "Joao Espanha",
   "license": "ISC",
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@langchain/langgraph": "^0.0.26"
+  },
   "devDependencies": {
     "jest": "^29.7.0"
   },

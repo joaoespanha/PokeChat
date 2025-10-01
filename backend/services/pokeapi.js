@@ -276,8 +276,3 @@ class PokeAPIService {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = PokeAPIService;
   }
-  
-  // Exemplo de uso
-  // const pokeService = new PokeAPIService();
-  // const pikachu = await pokeService.getPokemon('pikachu');
-  // console.log(pikachu);
