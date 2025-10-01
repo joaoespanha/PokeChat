@@ -167,7 +167,11 @@ const menuNode = async (state) => {
     console.log('[NODE] menuNode - Sem input, aguardando escolha do usuário');
     return {
       ...state,
-      currentNode: 'menu'
+      currentNode: 'menu',
+      context: {
+        ...state.context,
+        waitingFor: 'menu_choice'
+      }
     };
   }
 
@@ -243,6 +247,19 @@ const searchNode = async (state) => {
   console.log('[NODE] searchNode - Buscando Pokémon');
 
   const input = state.userInput.trim().toLowerCase();
+  
+  // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
+  if (!input) {
+    console.log('[NODE] searchNode - Sem input, aguardando nome do Pokémon');
+    return {
+      ...state,
+      currentNode: 'search',
+      context: {
+        ...state.context,
+        waitingFor: 'pokemon_input'
+      }
+    };
+  }
   
   // Verificar comando "voltar" antes de processar
   const voltarResult = utils.handleVoltarCommand(state, input);
@@ -346,6 +363,19 @@ const compareNode = async (state) => {
 
   const input = state.userInput.trim();
   
+  // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
+  if (!input) {
+    console.log('[NODE] compareNode - Sem input, aguardando nomes dos Pokémon');
+    return {
+      ...state,
+      currentNode: 'compare',
+      context: {
+        ...state.context,
+        waitingFor: 'pokemon_input'
+      }
+    };
+  }
+  
   // Verificar comando "voltar" antes de processar
   const voltarResult = utils.handleVoltarCommand(state, input);
   if (voltarResult.handled) {
@@ -427,6 +457,19 @@ const evolutionNode = async (state) => {
 
   const input = state.userInput.trim();
   
+  // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
+  if (!input) {
+    console.log('[NODE] evolutionNode - Sem input, aguardando nome do Pokémon');
+    return {
+      ...state,
+      currentNode: 'evolution',
+      context: {
+        ...state.context,
+        waitingFor: 'pokemon_input'
+      }
+    };
+  }
+  
   // Verificar comando "voltar" antes de processar
   const voltarResult = utils.handleVoltarCommand(state, input);
   if (voltarResult.handled) {
@@ -501,6 +544,19 @@ const typeSearchNode = async (state) => {
   console.log('[NODE] typeSearchNode - Buscando por tipo');
 
   const input = state.userInput.trim().toLowerCase();
+  
+  // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
+  if (!input) {
+    console.log('[NODE] typeSearchNode - Sem input, aguardando tipo de Pokémon');
+    return {
+      ...state,
+      currentNode: 'type_search',
+      context: {
+        ...state.context,
+        waitingFor: 'pokemon_input'
+      }
+    };
+  }
   
   // Verificar comando "voltar" antes de processar
   const voltarResult = utils.handleVoltarCommand(state, input);
