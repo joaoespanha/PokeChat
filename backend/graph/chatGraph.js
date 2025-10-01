@@ -6,6 +6,8 @@
 const { StateGraph, END } = require("@langchain/langgraph");
 const { nodes } = require('./nodes');
 const { createInitialState, NODE_TYPES } = require('./stateSchema');
+const logger = require('../config/logger');
+const { metrics } = require('../config/monitoring');
 
 /**
  * Classe principal do Chatbot com LangGraph
@@ -22,7 +24,7 @@ class PokemonChatbot {
    * Configura o grafo com todos os nós e transições
    */
   setupGraph() {
-    console.log('[GRAPH] Configurando grafo do chatbot...');
+    logger.info('Setting up chatbot graph...');
 
     // Criar o grafo com estado inicial
     this.graph = new StateGraph({
@@ -121,7 +123,7 @@ class PokemonChatbot {
 
     // Compilar o grafo
     this.compiledGraph = this.graph.compile();
-    console.log('[GRAPH] Grafo compilado com sucesso!');
+    logger.info('Chatbot graph compiled successfully');
   }
 
   // ============================================
@@ -185,14 +187,18 @@ class PokemonChatbot {
   // ============================================
 
   async start() {
-    console.log('[CHATBOT] Iniciando nova conversa...');
-    this.currentState = createInitialState(this.generateSessionId());
+    const sessionId = this.generateSessionId();
+    logger.info('Starting new chat conversation', { sessionId });
+    this.currentState = createInitialState(sessionId);
     this.currentState = await this.compiledGraph.invoke(this.currentState);
+    logger.info('Chat conversation started successfully', { sessionId });
     return this.getLastMessage();
   }
 
   async processMessage(userInput) {
-    console.log(`[CHATBOT] Processando: "${userInput}"`);
+    logger.debug(`Processing user message: "${userInput}"`, {
+      sessionId: this.currentState.sessionId
+    });
 
     if (!userInput || userInput.trim() === '') {
       return {
@@ -208,6 +214,11 @@ class PokemonChatbot {
     };
 
     try {
+        logger.debug(`Processing message in node: ${this.currentState.currentNode}`, {
+          sessionId: this.currentState.sessionId,
+          messageLength: userInput.length
+        });
+        
         // This logic correctly invokes the specific node for the current state,
         // which is a reliable pattern for this library version.
         const currentNodeName = this.currentState.currentNode;
@@ -216,9 +227,23 @@ class PokemonChatbot {
         } else {
             this.currentState = await this.compiledGraph.invoke(this.currentState);
         }
+        
+        logger.debug(`Message processed successfully`, {
+          sessionId: this.currentState.sessionId,
+          newNode: this.currentState.currentNode
+        });
+        
         return this.getLastMessage();
     } catch (error) {
-      console.error('[CHATBOT ERROR]:', error);
+      // Update monitoring metrics
+      metrics.incrementErrors('message_processing', 'chat_graph');
+      
+      logger.error('Error processing chat message', {
+        sessionId: this.currentState.sessionId,
+        currentNode: this.currentState.currentNode,
+        error: error.message,
+        stack: error.stack
+      });
       return {
         role: 'assistant',
         content: `❌ Erro ao processar mensagem: ${error.message}\n\nTente "menu" para voltar ao menu principal.`,
@@ -256,7 +281,9 @@ class PokemonChatbot {
   }
 
   async reset() {
-    console.log('[CHATBOT] Resetando conversa...');
+    logger.info('Resetting chat conversation', { 
+      sessionId: this.currentState.sessionId 
+    });
     return this.start();
   }
 
