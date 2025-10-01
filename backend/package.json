@@ -25,7 +25,8 @@
   "dependencies": {
     "@langchain/langgraph": "^0.0.26",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "winston": "^3.18.3"
   },
   "devDependencies": {
     "jest": "^29.7.0",

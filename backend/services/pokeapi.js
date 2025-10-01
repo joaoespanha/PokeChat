@@ -3,6 +3,8 @@
  * @see https://pokeapi.co/docs/v2
  */
 
+const logger = require('../config/logger');
+
 class PokeAPIService {
     constructor() {
       this.baseURL = 'https://pokeapi.co/api/v2';
@@ -24,40 +26,47 @@ class PokeAPIService {
       if (useCache && this.cache.has(cacheKey)) {
         const cached = this.cache.get(cacheKey);
         if (Date.now() - cached.timestamp < this.cacheExpiry) {
-          console.log(`[CACHE HIT] ${endpoint}`);
+          logger.debug(`Cache hit for ${endpoint}`);
           return cached.data;
         } else {
           this.cache.delete(cacheKey);
         }
       }
-  
+
       try {
-        console.log(`[API REQUEST] ${url}`);
+        logger.http(`Making API request to ${endpoint}`);
         const response = await fetch(url);
   
         if (!response.ok) {
           if (response.status === 404) {
+            logger.warn(`Pokemon not found: ${endpoint}`);
             throw new Error('POKEMON_NOT_FOUND');
           }
+          logger.error(`API error ${response.status} for ${endpoint}`);
           throw new Error(`API_ERROR: ${response.status}`);
         }
-  
+
         const data = await response.json();
-  
+        logger.debug(`API request successful for ${endpoint}`);
+
         // Armazenar no cache
         if (useCache) {
           this.cache.set(cacheKey, {
             data,
             timestamp: Date.now()
           });
+          logger.debug(`Data cached for ${endpoint}`);
         }
-  
+
         return data;
       } catch (error) {
         if (error.message === 'POKEMON_NOT_FOUND') {
           throw error;
         }
-        console.error(`[API ERROR] ${endpoint}:`, error.message);
+        logger.error(`API request failed for ${endpoint}`, { 
+          error: error.message,
+          endpoint 
+        });
         throw new Error('NETWORK_ERROR');
       }
     }
@@ -69,15 +78,18 @@ class PokeAPIService {
      */
     async getPokemon(identifier) {
       if (!identifier) {
+        logger.warn('Invalid Pokemon identifier provided');
         throw new Error('INVALID_IDENTIFIER');
       }
-  
+
       // Normalizar entrada (lowercase, trim)
       const normalized = typeof identifier === 'string' 
         ? identifier.toLowerCase().trim() 
         : identifier;
-  
+
+      logger.info(`Fetching Pokemon data for: ${normalized}`);
       const data = await this._fetch(`/pokemon/${normalized}`);
+      logger.debug(`Pokemon data retrieved successfully for: ${normalized}`);
       return this._formatPokemonData(data);
     }
   
@@ -88,11 +100,15 @@ class PokeAPIService {
      */
     async getMultiplePokemon(identifiers) {
       if (!Array.isArray(identifiers) || identifiers.length === 0) {
+        logger.warn('Invalid Pokemon identifiers array provided');
         throw new Error('INVALID_IDENTIFIERS');
       }
-  
+
+      logger.info(`Fetching multiple Pokemon data for ${identifiers.length} Pokemon`);
       const promises = identifiers.map(id => this.getPokemon(id));
-      return Promise.all(promises);
+      const results = await Promise.all(promises);
+      logger.debug(`Successfully retrieved data for ${results.length} Pokemon`);
+      return results;
     }
   
     /**
@@ -268,8 +284,9 @@ class PokeAPIService {
      * Limpa o cache
      */
     clearCache() {
+      const previousSize = this.cache.size;
       this.cache.clear();
-      console.log('[CACHE] Cache limpo');
+      logger.info(`Cache cleared - removed ${previousSize} entries`);
     }
   
     /**
