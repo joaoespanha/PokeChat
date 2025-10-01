@@ -318,6 +318,18 @@ describe('Nodes', () => {
       expect(compareMsg.data).toHaveProperty('pokemon1');
       expect(compareMsg.data).toHaveProperty('pokemon2');
     });
+
+    test('deve reconhecer comando menu e mostrar menu principal', async () => {
+      let state = createInitialState();
+      state.userInput = 'menu';
+      
+      const newState = await nodes.compare(state);
+      
+      expect(newState.currentNode).toBe('menu');
+      expect(newState.messages.some(m => 
+        m.content.includes('Bem-vindo ao PokéDex Assistant')
+      )).toBe(true);
+    });
   });
 
   // ============================================
@@ -346,6 +358,18 @@ describe('Nodes', () => {
         m.content.includes('Pichu') &&
         m.content.includes('Pikachu') &&
         m.content.includes('Raichu')
+      )).toBe(true);
+    });
+
+    test('deve reconhecer comando menu e mostrar menu principal', async () => {
+      let state = createInitialState();
+      state.userInput = 'menu';
+      
+      const newState = await nodes.evolution(state);
+      
+      expect(newState.currentNode).toBe('menu');
+      expect(newState.messages.some(m => 
+        m.content.includes('Bem-vindo ao PokéDex Assistant')
       )).toBe(true);
     });
 
@@ -403,7 +427,7 @@ describe('Nodes', () => {
       )).toBe(true);
     });
 
-    test('deve reconhecer comando menu e voltar ao menu principal', async () => {
+    test('deve reconhecer comando menu e mostrar menu principal', async () => {
       let state = createInitialState();
       state.userInput = 'menu';
       
@@ -411,7 +435,7 @@ describe('Nodes', () => {
       
       expect(newState.currentNode).toBe('menu');
       expect(newState.messages.some(m => 
-        m.content.includes('Voltando ao menu')
+        m.content.includes('Bem-vindo ao PokéDex Assistant')
       )).toBe(true);
     });
 

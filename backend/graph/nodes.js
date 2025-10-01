@@ -267,7 +267,7 @@ const searchNode = async (state) => {
 
   // Verificar comandos especiais antes de buscar Pokémon
   if (input.includes('menu')) {
-    newState = utils.addMessage(newState, 'assistant', botMessages.BACK_TO_MENU);
+    newState = utils.addMessage(newState, 'assistant', botMessages.WELCOME_MESSAGE);
     newState = utils.incrementInteraction(newState);
     newState.userInput = '';
     newState.currentNode = 'menu';
@@ -366,6 +366,15 @@ const compareNode = async (state) => {
 
   let newState = utils.addMessage(state, 'user', input);
 
+  // Verificar comando "menu"
+  if (input.includes('menu')) {
+    newState = utils.addMessage(newState, 'assistant', botMessages.WELCOME_MESSAGE);
+    newState = utils.incrementInteraction(newState);
+    newState.userInput = '';
+    newState.currentNode = 'menu';
+    return newState;
+  }
+
   try {
     // Parse entrada (espera "pokemon1, pokemon2")
     const parts = input.split(',').map(p => p.trim()).filter(p => p);
@@ -438,6 +447,15 @@ const evolutionNode = async (state) => {
 
   let newState = utils.addMessage(state, 'user', input);
 
+  // Verificar comando "menu"
+  if (input.includes('menu')) {
+    newState = utils.addMessage(newState, 'assistant', botMessages.WELCOME_MESSAGE);
+    newState = utils.incrementInteraction(newState);
+    newState.userInput = '';
+    newState.currentNode = 'menu';
+    return newState;
+  }
+
   try {
     // Buscar Pokémon
     const pokemon = await pokeService.getPokemon(input);
@@ -506,7 +524,7 @@ const typeSearchNode = async (state) => {
 
   // Verificar comandos especiais antes de buscar por tipo
   if (input.includes('menu')) {
-    newState = utils.addMessage(newState, 'assistant', botMessages.BACK_TO_MENU);
+    newState = utils.addMessage(newState, 'assistant', botMessages.WELCOME_MESSAGE);
     newState = utils.incrementInteraction(newState);
     newState.userInput = '';
     newState.currentNode = 'menu';
