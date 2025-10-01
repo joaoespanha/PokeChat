@@ -41,7 +41,7 @@ const EvolutionChain = ({ evolutionChain }) => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden animate-fade-in">
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl animate-fade-in">
       {/* Cabeçalho com gradiente */}
       <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
         {/* Padrão de fundo */}
@@ -63,7 +63,7 @@ const EvolutionChain = ({ evolutionChain }) => {
 
       {/* Cadeia de evolução */}
       <div className="p-4 sm:p-6 bg-gradient-to-b from-purple-50 to-white">
-        <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-8">
+        <div className="flex flex-col sm:flex-row sm:flex-nowrap items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-8 overflow-x-auto w-full">
           {evolutionChain.map((pokemon, index) => {
             const isLast = index === evolutionChain.length - 1;
             const primaryType = pokemon.types?.[0] || 'normal';

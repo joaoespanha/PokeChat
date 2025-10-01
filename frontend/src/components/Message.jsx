@@ -40,7 +40,7 @@ const Message = ({ message }) => {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 sm:mb-6 animate-fade-in px-2 sm:px-0`}>
-      <div className={`relative max-w-[85%] sm:max-w-2xl ${isUser ? 'ml-8 sm:ml-12' : 'mr-8 sm:mr-12'}`}>
+      <div className={`relative max-w-[95%] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl ${isUser ? 'ml-8 sm:ml-12' : 'mr-8 sm:mr-12'}`}>
         {/* Avatar */}
         <div className={`absolute ${isUser ? '-right-6 sm:-right-10 top-0' : '-left-6 sm:-left-10 top-0'} w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shadow-lg`}>
           {isUser ? (
