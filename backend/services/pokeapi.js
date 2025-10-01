@@ -112,7 +112,7 @@ class PokeAPIService {
      */
     async getEvolutionChain(chainId) {
       const data = await this._fetch(`/evolution-chain/${chainId}`);
-      return this._formatEvolutionChain(data.chain);
+      return await this._formatEvolutionChain(data.chain);
     }
   
     /**
@@ -168,28 +168,38 @@ class PokeAPIService {
      * @private
      */
     _formatPokemonData(data) {
+      // Defensive extraction for sprites and stats to avoid undefined fields
+      const officialArtwork = data?.sprites?.other?.['official-artwork']?.front_default || null;
+      const frontDefault = data?.sprites?.front_default || null;
+      const frontShiny = data?.sprites?.front_shiny || null;
+
+      const findStat = (name) => {
+        const stat = Array.isArray(data?.stats) ? data.stats.find(s => s?.stat?.name === name) : null;
+        return stat?.base_stat ?? null;
+      };
+
       return {
         id: data.id,
         name: data.name,
         nameCapitalized: this._capitalize(data.name),
         types: data.types.map(t => t.type.name),
         stats: {
-          hp: data.stats.find(s => s.stat.name === 'hp').base_stat,
-          attack: data.stats.find(s => s.stat.name === 'attack').base_stat,
-          defense: data.stats.find(s => s.stat.name === 'defense').base_stat,
-          specialAttack: data.stats.find(s => s.stat.name === 'special-attack').base_stat,
-          specialDefense: data.stats.find(s => s.stat.name === 'special-defense').base_stat,
-          speed: data.stats.find(s => s.stat.name === 'speed').base_stat,
-          total: data.stats.reduce((sum, s) => sum + s.base_stat, 0)
+          hp: findStat('hp'),
+          attack: findStat('attack'),
+          defense: findStat('defense'),
+          specialAttack: findStat('special-attack'),
+          specialDefense: findStat('special-defense'),
+          speed: findStat('speed'),
+          total: Array.isArray(data?.stats) ? data.stats.reduce((sum, s) => sum + (s?.base_stat ?? 0), 0) : null
         },
         abilities: data.abilities.map(a => ({
           name: a.ability.name,
           isHidden: a.is_hidden
         })),
         sprites: {
-          front: data.sprites.front_default,
-          frontShiny: data.sprites.front_shiny,
-          official: data.sprites.other['official-artwork'].front_default
+          front: frontDefault,
+          frontShiny: frontShiny,
+          official: officialArtwork
         },
         height: data.height / 10, // decímetros para metros
         weight: data.weight / 10, // hectogramas para kg
@@ -223,21 +233,22 @@ class PokeAPIService {
      * Formata cadeia de evolução recursivamente
      * @private
      */
-    _formatEvolutionChain(chain) {
+    async _formatEvolutionChain(chain) {
       const evolutions = [];
       
-      const traverse = (node) => {
-        evolutions.push({
-          name: node.species.name,
-          nameCapitalized: this._capitalize(node.species.name)
-        });
+      const traverse = async (node) => {
+        // Buscar dados completos do Pokémon
+        const pokemonData = await this.getPokemon(node.species.name);
+        evolutions.push(pokemonData);
         
         if (node.evolves_to.length > 0) {
-          node.evolves_to.forEach(evolution => traverse(evolution));
+          for (const evolution of node.evolves_to) {
+            await traverse(evolution);
+          }
         }
       };
       
-      traverse(chain);
+      await traverse(chain);
       return evolutions;
     }
   

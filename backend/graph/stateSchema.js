@@ -50,6 +50,9 @@ const NODE_TYPES = Object.freeze({
       // Nó atual
       currentNode: NODE_TYPES.START,
       
+      // Histórico de navegação (para funcionalidade "voltar")
+      navigationHistory: [],
+      
       // Contexto
       context: {
         pokemonData: null,
@@ -141,6 +144,54 @@ const NODE_TYPES = Object.freeze({
       currentNode: newNode
     };
   }
+
+  /**
+   * Adiciona nó atual ao histórico de navegação e transiciona para novo nó
+   */
+  function transitionToWithHistory(state, newNode) {
+    // Não adiciona ao histórico se está apenas permanecendo no mesmo nó
+    if (state.currentNode === newNode) {
+      return state;
+    }
+    
+    // Não adiciona 'start' ao histórico, pois é o estado inicial
+    const shouldAddToHistory = state.currentNode !== NODE_TYPES.START;
+    
+    return {
+      ...state,
+      currentNode: newNode,
+      navigationHistory: shouldAddToHistory 
+        ? [...state.navigationHistory, state.currentNode]
+        : state.navigationHistory
+    };
+  }
+
+  /**
+   * Volta ao nó anterior no histórico
+   */
+  function goBack(state) {
+    if (state.navigationHistory.length === 0) {
+      // Não há histórico, permanece no nó atual
+      return state;
+    }
+
+    const newHistory = [...state.navigationHistory];
+    const previousNode = newHistory.pop();
+
+    return {
+      ...state,
+      currentNode: previousNode,
+      navigationHistory: newHistory,
+      userInput: '' // Limpa o input ao voltar
+    };
+  }
+
+  /**
+   * Verifica se pode voltar (tem histórico)
+   */
+  function canGoBack(state) {
+    return state.navigationHistory.length > 0;
+  }
   
   /**
    * Define erro
@@ -208,6 +259,9 @@ const NODE_TYPES = Object.freeze({
     incrementInteraction,
     setUserInput,
     transitionTo,
+    transitionToWithHistory,
+    goBack,
+    canGoBack,
     setError,
     clearError,
     getSessionDuration,

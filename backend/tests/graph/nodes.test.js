@@ -318,6 +318,18 @@ describe('Nodes', () => {
       expect(compareMsg.data).toHaveProperty('pokemon1');
       expect(compareMsg.data).toHaveProperty('pokemon2');
     });
+
+    test('deve reconhecer comando menu e mostrar menu principal', async () => {
+      let state = createInitialState();
+      state.userInput = 'menu';
+      
+      const newState = await nodes.compare(state);
+      
+      expect(newState.currentNode).toBe('menu');
+      expect(newState.messages.some(m => 
+        m.content.includes('Bem-vindo ao PokéDex Assistant')
+      )).toBe(true);
+    });
   });
 
   // ============================================
@@ -346,6 +358,18 @@ describe('Nodes', () => {
         m.content.includes('Pichu') &&
         m.content.includes('Pikachu') &&
         m.content.includes('Raichu')
+      )).toBe(true);
+    });
+
+    test('deve reconhecer comando menu e mostrar menu principal', async () => {
+      let state = createInitialState();
+      state.userInput = 'menu';
+      
+      const newState = await nodes.evolution(state);
+      
+      expect(newState.currentNode).toBe('menu');
+      expect(newState.messages.some(m => 
+        m.content.includes('Bem-vindo ao PokéDex Assistant')
       )).toBe(true);
     });
 
@@ -389,21 +413,21 @@ describe('Nodes', () => {
       )).toBe(true);
     });
 
-    test('deve tratar tipo inválido redirecionando para search', async () => {
+    test('deve tratar tipo inválido permanecendo em type_search', async () => {
       let state = createInitialState();
       state.userInput = 'tipoinvalido';
       
       const newState = await nodes.type_search(state);
       
-      // Agora processa automaticamente como Pokémon e limpa o input
-      expect(newState.currentNode).toBe('search');
+      // Deve permanecer em type_search quando não encontra o tipo/Pokemon
+      expect(newState.currentNode).toBe('type_search');
       expect(newState.userInput).toBe('');
       expect(newState.messages.some(m => 
-        m.content.includes('tipoinvalido') || m.content.includes('não encontrado')
+        m.content.includes('tipo de Pokémon válido') || m.content.includes('Tipos válidos')
       )).toBe(true);
     });
 
-    test('deve reconhecer comando menu e voltar ao menu principal', async () => {
+    test('deve reconhecer comando menu e mostrar menu principal', async () => {
       let state = createInitialState();
       state.userInput = 'menu';
       
@@ -411,20 +435,150 @@ describe('Nodes', () => {
       
       expect(newState.currentNode).toBe('menu');
       expect(newState.messages.some(m => 
-        m.content.includes('Voltando ao menu')
+        m.content.includes('Bem-vindo ao PokéDex Assistant')
       )).toBe(true);
     });
 
-    test('deve redirecionar para search quando input não é tipo válido', async () => {
+    test('deve permanecer em type_search quando input não é tipo válido e Pokemon não existe', async () => {
       let state = createInitialState();
       state.userInput = 'tangela';
       
       const newState = await nodes.type_search(state);
       
-      expect(newState.currentNode).toBe('search');
+      // Deve permanecer em type_search quando não encontra o tipo nem o Pokemon
+      expect(newState.currentNode).toBe('type_search');
       expect(newState.userInput).toBe('');
       expect(newState.messages.some(m => 
-        m.content.includes('tangela') || m.content.includes('Tangela')
+        m.content.includes('tipo de Pokémon válido') || m.content.includes('Tipos válidos')
+      )).toBe(true);
+    });
+
+    // Testes da funcionalidade de busca em 2 etapas (tipo -> pokemon)
+    test('deve definir lastTypeSearched após mostrar lista de tipo', async () => {
+      let state = createInitialState();
+      state.userInput = 'dragon';
+      
+      const newState = await nodes.type_search(state);
+      
+      expect(newState.context.lastTypeSearched).toBe('dragon');
+      expect(newState.messages.some(m => 
+        m.content.includes('Pokémon do tipo DRAGON')
+      )).toBe(true);
+    });
+
+    test('deve permitir busca de Pokemon por nome após mostrar tipo', async () => {
+      let state = createInitialState();
+      
+      // Primeiro mostrar lista de tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('electric');
+      
+      // Agora buscar Pokemon por nome
+      state.userInput = 'pikachu';
+      state = await nodes.type_search(state);
+      
+      expect(state.messages.some(m => 
+        m.content.includes('Pikachu')
+      )).toBe(true);
+      expect(state.context.lastTypeSearched).toBe(null); // Limpa após buscar
+    });
+
+    test('deve permitir busca de Pokemon por número após mostrar tipo', async () => {
+      let state = createInitialState();
+      
+      // Primeiro mostrar lista de tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('electric');
+      
+      // Agora buscar Pokemon por número
+      state.userInput = '25';
+      state = await nodes.type_search(state);
+      
+      expect(state.messages.some(m => 
+        m.content.includes('Pikachu') || m.content.includes('pikachu')
+      )).toBe(true);
+      expect(state.context.lastTypeSearched).toBe(null); // Limpa após buscar
+    });
+
+    test('deve limpar lastTypeSearched após buscar Pokemon', async () => {
+      let state = createInitialState();
+      
+      // Mostrar tipo e buscar Pokemon
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      state.userInput = 'pikachu';
+      state = await nodes.type_search(state);
+      
+      expect(state.context.lastTypeSearched).toBe(null);
+    });
+
+    test('deve rejeitar Pokemon sem lastTypeSearched', async () => {
+      let state = createInitialState();
+      // Não definir lastTypeSearched
+      
+      state.userInput = 'pikachu';
+      const newState = await nodes.type_search(state);
+      
+      expect(newState.messages.some(m => 
+        m.content.includes('não é um tipo de Pokémon válido')
+      )).toBe(true);
+      expect(newState.currentNode).toBe('type_search');
+    });
+
+    test('deve permitir buscar outro tipo após mostrar lista', async () => {
+      let state = createInitialState();
+      
+      // Mostrar primeiro tipo
+      state.userInput = 'dragon';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('dragon');
+      
+      // Buscar outro tipo
+      state.userInput = 'fire';
+      state = await nodes.type_search(state);
+      
+      expect(state.context.lastTypeSearched).toBe('fire');
+      expect(state.messages.some(m => 
+        m.content.includes('Pokémon do tipo FIRE')
+      )).toBe(true);
+    });
+
+    test('deve mostrar erro com sugestões quando Pokemon não encontrado após tipo', async () => {
+      let state = createInitialState();
+      
+      // Mostrar tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      
+      // Tentar buscar Pokemon inexistente
+      state.userInput = 'pikach'; // typo
+      state = await nodes.type_search(state);
+      
+      expect(state.messages.some(m => 
+        m.content.includes('não encontrado') && m.content.includes('pikachu')
+      )).toBe(true);
+    });
+
+    test('fluxo completo: tipo -> pokemon -> rejeitar input inválido', async () => {
+      let state = createInitialState();
+      
+      // Passo 1: Mostrar tipo
+      state.userInput = 'electric';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe('electric');
+      
+      // Passo 2: Buscar Pokemon
+      state.userInput = 'pikachu';
+      state = await nodes.type_search(state);
+      expect(state.context.lastTypeSearched).toBe(null);
+      
+      // Passo 3: Tentar input inválido (deve rejeitar)
+      state.userInput = 'invalido';
+      state = await nodes.type_search(state);
+      expect(state.messages.some(m => 
+        m.content.includes('não é um tipo de Pokémon válido')
       )).toBe(true);
     });
   });
@@ -505,6 +659,256 @@ describe('Nodes', () => {
       expect(userMsgs.length).toBeGreaterThan(0);
       expect(assistantMsgs.length).toBeGreaterThan(0);
       expect(state.messages.length).toBeGreaterThan(3);
+    });
+  });
+
+  // ============================================
+  // Testes da Funcionalidade "Voltar"
+  // ============================================
+  describe('Funcionalidade Voltar', () => {
+    
+    test('deve voltar do nó SEARCH para o MENU', async () => {
+      let state = createInitialState();
+      
+      // Navegar: start -> menu -> search
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      // Verificar que está no nó SEARCH com histórico
+      expect(state.currentNode).toBe(NODE_TYPES.SEARCH);
+      expect(state.navigationHistory).toContain(NODE_TYPES.MENU);
+      
+      // Executar "voltar"
+      state.userInput = 'voltar';
+      state = await nodes.search(state);
+      
+      // Verificar que voltou ao MENU
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+      expect(state.navigationHistory).toEqual([]);
+      
+      // Verificar que a mensagem do menu foi exibida
+      const lastMessage = state.messages[state.messages.length - 1];
+      expect(lastMessage.role).toBe(MESSAGE_ROLES.ASSISTANT);
+      expect(lastMessage.content).toContain('Bem-vindo');
+    });
+
+    test('deve voltar do nó COMPARE para o MENU', async () => {
+      let state = createInitialState();
+      
+      // Navegar: start -> menu -> compare
+      state = await nodes.start(state);
+      state.userInput = '2';
+      state = await nodes.menu(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.COMPARE);
+      expect(state.navigationHistory).toContain(NODE_TYPES.MENU);
+      
+      // Executar "voltar"
+      state.userInput = 'voltar';
+      state = await nodes.compare(state);
+      
+      // Verificar resultado
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+      expect(state.navigationHistory).toEqual([]);
+      
+      const lastMessage = state.messages[state.messages.length - 1];
+      expect(lastMessage.content).toContain('Bem-vindo');
+    });
+
+    test('deve voltar do nó EVOLUTION para o MENU', async () => {
+      let state = createInitialState();
+      
+      // Navegar: start -> menu -> evolution
+      state = await nodes.start(state);
+      state.userInput = '3';
+      state = await nodes.menu(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.EVOLUTION);
+      
+      // Executar "voltar"
+      state.userInput = 'voltar';
+      state = await nodes.evolution(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+      expect(state.navigationHistory).toEqual([]);
+    });
+
+    test('deve voltar do nó TYPE_SEARCH para o MENU', async () => {
+      let state = createInitialState();
+      
+      // Navegar: start -> menu -> type_search
+      state = await nodes.start(state);
+      state.userInput = '4';
+      state = await nodes.menu(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.TYPE_SEARCH);
+      
+      // Executar "voltar"
+      state.userInput = 'voltar';
+      state = await nodes.type_search(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+      expect(state.navigationHistory).toEqual([]);
+    });
+
+    test('deve mostrar mensagem quando tentar voltar no início (MENU)', async () => {
+      let state = createInitialState();
+      
+      // Ir para o menu
+      state = await nodes.start(state);
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+      expect(state.navigationHistory).toEqual([]);
+      
+      // Tentar voltar
+      state.userInput = 'voltar';
+      state = await nodes.menu(state);
+      
+      // Deve permanecer no MENU
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+      
+      // Deve mostrar mensagem informando que já está no início
+      const lastMessage = state.messages[state.messages.length - 1];
+      expect(lastMessage.content).toContain('já está no início');
+    });
+
+    test('deve adicionar mensagem do usuário ao digitar voltar', async () => {
+      let state = createInitialState();
+      
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      const messageCountBefore = state.messages.length;
+      
+      // Executar "voltar"
+      state.userInput = 'voltar';
+      state = await nodes.search(state);
+      
+      // Verificar que a mensagem do usuário foi adicionada
+      const userMessages = state.messages.filter(m => m.role === MESSAGE_ROLES.USER);
+      expect(userMessages.some(m => m.content === 'voltar')).toBe(true);
+      expect(state.messages.length).toBeGreaterThan(messageCountBefore);
+    });
+
+    test('deve limpar o userInput após processar voltar', async () => {
+      let state = createInitialState();
+      
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      state.userInput = 'voltar';
+      state = await nodes.search(state);
+      
+      // userInput deve estar vazio após processar voltar
+      expect(state.userInput).toBe('');
+    });
+
+    test('deve manter histórico correto em múltiplas navegações', async () => {
+      let state = createInitialState();
+      
+      // start -> menu
+      state = await nodes.start(state);
+      expect(state.navigationHistory).toEqual([]);
+      
+      // menu -> search
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      expect(state.navigationHistory).toEqual([NODE_TYPES.MENU]);
+      
+      // search -> voltar -> menu
+      state.userInput = 'voltar';
+      state = await nodes.search(state);
+      expect(state.navigationHistory).toEqual([]);
+      
+      // menu -> compare
+      state.userInput = '2';
+      state = await nodes.menu(state);
+      expect(state.navigationHistory).toEqual([NODE_TYPES.MENU]);
+      
+      // compare -> voltar -> menu
+      state.userInput = 'voltar';
+      state = await nodes.compare(state);
+      expect(state.navigationHistory).toEqual([]);
+    });
+
+    test('deve incrementar contador de interações ao usar voltar', async () => {
+      let state = createInitialState();
+      
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      const interactionCountBefore = state.metadata.interactionCount;
+      
+      state.userInput = 'voltar';
+      state = await nodes.search(state);
+      
+      expect(state.metadata.interactionCount).toBeGreaterThan(interactionCountBefore);
+    });
+
+    test('voltar deve ser case-insensitive', async () => {
+      let state = createInitialState();
+      
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      // Testar com diferentes casos
+      state.userInput = 'VOLTAR';
+      state = await nodes.search(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+    });
+
+    test('deve funcionar com espaços ao redor de voltar', async () => {
+      let state = createInitialState();
+      
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      state.userInput = '  voltar  ';
+      state = await nodes.search(state);
+      
+      expect(state.currentNode).toBe(NODE_TYPES.MENU);
+    });
+
+    test('não deve processar voltar se for parte de outra palavra', async () => {
+      let state = createInitialState();
+      
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      // "voltaremos" não deve ser tratado como "voltar"
+      state.userInput = 'voltaremos';
+      state = await nodes.search(state);
+      
+      // Deve tentar processar como busca de Pokémon (resultando em erro)
+      // e não como comando voltar
+      expect(state.currentNode).toBe(NODE_TYPES.SEARCH);
+      // O nó deve permanecer como SEARCH pois voltaremos não é um comando válido
+    });
+
+    test('deve exibir mensagem correta do nó de destino ao voltar', async () => {
+      let state = createInitialState();
+      
+      // Ir para SEARCH
+      state = await nodes.start(state);
+      state.userInput = '1';
+      state = await nodes.menu(state);
+      
+      // Voltar para MENU
+      state.userInput = 'voltar';
+      state = await nodes.search(state);
+      
+      // Verificar que a última mensagem é a de boas-vindas do menu
+      const lastMessage = state.messages[state.messages.length - 1];
+      expect(lastMessage.role).toBe(MESSAGE_ROLES.ASSISTANT);
+      expect(lastMessage.content).toContain('Bem-vindo ao PokéDex Assistant');
+      expect(lastMessage.content).toContain('Posso te ajudar a');
     });
   });
 });

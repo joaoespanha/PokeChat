@@ -16,12 +16,18 @@ const startSession = async (req, res) => {
     const chatbot = new PokemonChatbot();
     const welcomeMessage = await chatbot.start();
     const sessionId = chatbot.currentState.sessionId;
+    const currentState = chatbot.getCurrentState();
+
 
     activeSessions.set(sessionId, chatbot);
 
     res.status(201).json({
       sessionId,
-      message: welcomeMessage
+      message: welcomeMessage,
+      currentState: {
+        node: currentState.currentNode,
+        waitingFor: currentState.waitingFor
+      }
     });
   } catch (error) {
     console.error('[ERROR] startSession:', error);
@@ -46,7 +52,14 @@ const postMessage = async (req, res) => {
 
   try {
     const response = await chatbot.processMessage(message);
-    res.status(200).json({ response });
+    const currentState = chatbot.getCurrentState();
+    res.status(200).json({ 
+      response,
+      currentState: {
+        node: currentState.currentNode,
+        waitingFor: currentState.waitingFor
+      }
+    });
   } catch (error) {
     console.error('[ERROR] postMessage:', error);
     res.status(500).json({ error: 'Erro ao processar a mensagem.' });
