@@ -463,6 +463,16 @@ const typeSearchNode = async (state) => {
   const input = state.userInput.trim().toLowerCase();
   let newState = utils.addMessage(state, 'user', input);
 
+  // Verificar comandos especiais antes de buscar por tipo
+  if (input.includes('menu')) {
+    const response = '📋 Voltando ao menu principal...';
+    newState = utils.addMessage(newState, 'assistant', response);
+    newState = utils.incrementInteraction(newState);
+    newState.userInput = '';
+    newState.currentNode = 'menu';
+    return newState;
+  }
+
   try {
     const pokemonList = await pokeService.getPokemonByType(input);
 

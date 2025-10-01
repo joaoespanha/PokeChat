@@ -63,6 +63,14 @@ jest.mock('../../services/pokeapi', () => {
     }
 
     async getPokemonByType(type) {
+      const validTypes = ['normal', 'fire', 'water', 'grass', 'electric', 'ice', 
+                         'fighting', 'poison', 'ground', 'flying', 'psychic', 
+                         'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'];
+      
+      if (!validTypes.includes(type.toLowerCase())) {
+        throw new Error('POKEMON_NOT_FOUND');
+      }
+      
       return [
         { name: 'pikachu', url: 'url' },
         { name: 'raichu', url: 'url' }
@@ -390,6 +398,18 @@ describe('Nodes', () => {
       expect(newState.messages.some(m => 
         m.content.includes('não encontrado') ||
         m.content.includes('Erro')
+      )).toBe(true);
+    });
+
+    test('deve reconhecer comando menu e voltar ao menu principal', async () => {
+      let state = createInitialState();
+      state.userInput = 'menu';
+      
+      const newState = await nodes.type_search(state);
+      
+      expect(newState.currentNode).toBe('menu');
+      expect(newState.messages.some(m => 
+        m.content.includes('Voltando ao menu')
       )).toBe(true);
     });
   });
