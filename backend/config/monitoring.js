@@ -190,7 +190,7 @@ const statusMonitorConfig = {
   healthChecks: [
     {
       protocol: 'http',
-      host: 'localhost',
+      host: process.env.MONITORING_HOST || 'localhost',
       path: '/health',
       port: process.env.PORT || 3000
     }

@@ -2,6 +2,9 @@
  * Ponto de entrada do servidor da API do PokéChat
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const chatRoutes = require('./routes/chatRoutes');
@@ -11,10 +14,11 @@ const { register, metrics, statusMonitorConfig } = require('./config/monitoring'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware CORS - permite requisições do frontend
 app.use(cors({
-  origin: 'http://localhost:5173', // URL do frontend Vite
+  origin: FRONTEND_URL,
   credentials: true
 }));
 

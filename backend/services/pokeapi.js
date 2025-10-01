@@ -8,7 +8,7 @@ const { metrics } = require('../config/monitoring');
 
 class PokeAPIService {
     constructor() {
-      this.baseURL = 'https://pokeapi.co/api/v2';
+      this.baseURL = process.env.POKEAPI_BASE_URL || 'https://pokeapi.co/api/v2';
       this.cache = new Map(); // Cache simples em memória
       this.cacheExpiry = 1000 * 60 * 30; // 30 minutos
     }
