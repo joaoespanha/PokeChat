@@ -4,6 +4,7 @@
  */
 
 const logger = require('../config/logger');
+const { metrics } = require('../config/monitoring');
 
 class PokeAPIService {
     constructor() {
@@ -27,6 +28,7 @@ class PokeAPIService {
         const cached = this.cache.get(cacheKey);
         if (Date.now() - cached.timestamp < this.cacheExpiry) {
           logger.debug(`Cache hit for ${endpoint}`);
+          metrics.incrementCacheHits();
           return cached.data;
         } else {
           this.cache.delete(cacheKey);
@@ -34,19 +36,32 @@ class PokeAPIService {
       }
 
       try {
+        const startTime = Date.now();
         logger.http(`Making API request to ${endpoint}`);
         const response = await fetch(url);
   
         if (!response.ok) {
+          const duration = (Date.now() - startTime) / 1000;
+          metrics.recordPokemonApiDuration(endpoint, duration);
+          
           if (response.status === 404) {
             logger.warn(`Pokemon not found: ${endpoint}`);
+            metrics.incrementPokemonApiRequests(endpoint, 'not_found');
             throw new Error('POKEMON_NOT_FOUND');
           }
           logger.error(`API error ${response.status} for ${endpoint}`);
+          metrics.incrementPokemonApiRequests(endpoint, 'error');
           throw new Error(`API_ERROR: ${response.status}`);
         }
 
         const data = await response.json();
+        const duration = (Date.now() - startTime) / 1000;
+        
+        // Update monitoring metrics
+        metrics.incrementPokemonApiRequests(endpoint, 'success');
+        metrics.recordPokemonApiDuration(endpoint, duration);
+        metrics.incrementCacheMisses();
+        
         logger.debug(`API request successful for ${endpoint}`);
 
         // Armazenar no cache
@@ -63,6 +78,13 @@ class PokeAPIService {
         if (error.message === 'POKEMON_NOT_FOUND') {
           throw error;
         }
+        
+        // Update monitoring metrics for network errors
+        const duration = (Date.now() - startTime) / 1000;
+        metrics.recordPokemonApiDuration(endpoint, duration);
+        metrics.incrementPokemonApiRequests(endpoint, 'network_error');
+        metrics.incrementErrors('api_request', 'pokeapi_service');
+        
         logger.error(`API request failed for ${endpoint}`, { 
           error: error.message,
           endpoint 

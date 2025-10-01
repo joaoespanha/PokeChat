@@ -7,6 +7,7 @@ const { StateGraph, END } = require("@langchain/langgraph");
 const { nodes } = require('./nodes');
 const { createInitialState, NODE_TYPES } = require('./stateSchema');
 const logger = require('../config/logger');
+const { metrics } = require('../config/monitoring');
 
 /**
  * Classe principal do Chatbot com LangGraph
@@ -234,6 +235,9 @@ class PokemonChatbot {
         
         return this.getLastMessage();
     } catch (error) {
+      // Update monitoring metrics
+      metrics.incrementErrors('message_processing', 'chat_graph');
+      
       logger.error('Error processing chat message', {
         sessionId: this.currentState.sessionId,
         currentNode: this.currentState.currentNode,

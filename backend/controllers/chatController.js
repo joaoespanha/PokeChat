@@ -4,6 +4,7 @@
 
 const PokemonChatbot = require('../graph/chatGraph');
 const logger = require('../config/logger');
+const { metrics } = require('../config/monitoring');
 
 // Armazena as instâncias ativas do chatbot em memória
 // Em um ambiente de produção, considere usar um banco de dados como Redis
@@ -23,6 +24,10 @@ const startSession = async (req, res) => {
 
     activeSessions.set(sessionId, chatbot);
     
+    // Update monitoring metrics
+    metrics.incrementChatSessions('created');
+    metrics.setActiveChatSessions(activeSessions.size);
+    
     logger.info('Chat session created successfully', { 
       sessionId, 
       currentNode: currentState.currentNode,
@@ -38,6 +43,10 @@ const startSession = async (req, res) => {
       }
     });
   } catch (error) {
+    // Update monitoring metrics
+    metrics.incrementChatSessions('error');
+    metrics.incrementErrors('session_creation', 'chat_controller');
+    
     logger.error('Failed to start chat session', { 
       error: error.message, 
       stack: error.stack,
@@ -78,6 +87,9 @@ const postMessage = async (req, res) => {
     const response = await chatbot.processMessage(message);
     const currentState = chatbot.getCurrentState();
     
+    // Update monitoring metrics
+    metrics.incrementChatMessages(sessionId, currentState.currentNode);
+    
     logger.info('Message processed successfully', { 
       sessionId, 
       currentNode: currentState.currentNode,
@@ -93,6 +105,9 @@ const postMessage = async (req, res) => {
       }
     });
   } catch (error) {
+    // Update monitoring metrics
+    metrics.incrementErrors('message_processing', 'chat_controller');
+    
     logger.error('Failed to process message', { 
       sessionId,
       error: error.message, 
@@ -176,6 +191,11 @@ const deleteSession = (req, res) => {
 
   if (activeSessions.has(sessionId)) {
     activeSessions.delete(sessionId);
+    
+    // Update monitoring metrics
+    metrics.incrementChatSessions('deleted');
+    metrics.setActiveChatSessions(activeSessions.size);
+    
     logger.info('Session deleted successfully', { sessionId, ip: req.ip });
     res.status(200).json({ message: 'Sessão encerrada com sucesso.' });
   } else {
