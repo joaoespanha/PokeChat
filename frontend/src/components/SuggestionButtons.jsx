@@ -29,7 +29,8 @@ const SuggestionButtons = () => {
             { text: "Blastoise", icon: "💧", action: "Blastoise" },
             { text: "Venusaur", icon: "🌱", action: "Venusaur" },
             { text: "Mewtwo", icon: "🧠", action: "Mewtwo" },
-            { text: "Mew", icon: "✨", action: "Mew" }
+            { text: "Mew", icon: "✨", action: "Mew" },
+            { text: "Voltar ao Menu", icon: "📋", action: "menu" }
           ];
         }
         return [
@@ -43,7 +44,8 @@ const SuggestionButtons = () => {
             { text: "Pikachu vs Raichu", icon: "⚡", action: "Pikachu, Raichu" },
             { text: "Charizard vs Blastoise", icon: "🔥", action: "Charizard, Blastoise" },
             { text: "Mewtwo vs Mew", icon: "🧠", action: "Mewtwo, Mew" },
-            { text: "Gengar vs Alakazam", icon: "👻", action: "Gengar, Alakazam" }
+            { text: "Gengar vs Alakazam", icon: "👻", action: "Gengar, Alakazam" },
+            { text: "Voltar ao Menu", icon: "📋", action: "menu" }
           ];
         }
         return [
@@ -58,7 +60,8 @@ const SuggestionButtons = () => {
             { text: "Charmander", icon: "🔥", action: "Charmander" },
             { text: "Squirtle", icon: "💧", action: "Squirtle" },
             { text: "Bulbasaur", icon: "🌱", action: "Bulbasaur" },
-            { text: "Eevee", icon: "⭐", action: "Eevee" }
+            { text: "Eevee", icon: "⭐", action: "Eevee" },
+            { text: "Voltar ao Menu", icon: "📋", action: "menu" }
           ];
         }
         return [
@@ -74,7 +77,8 @@ const SuggestionButtons = () => {
             { text: "Grass", icon: "🌱", action: "grass" },
             { text: "Electric", icon: "⚡", action: "electric" },
             { text: "Psychic", icon: "🧠", action: "psychic" },
-            { text: "Dragon", icon: "🐉", action: "dragon" }
+            { text: "Dragon", icon: "🐉", action: "dragon" },
+            { text: "Voltar ao Menu", icon: "📋", action: "menu" }
           ];
         }
         return [
