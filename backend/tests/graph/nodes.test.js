@@ -9,7 +9,7 @@ const { createInitialState, NODE_TYPES, MESSAGE_ROLES } = require('../../graph/s
 jest.mock('../../services/pokeapi', () => {
   return class MockPokeAPIService {
     async getPokemon(identifier) {
-      if (identifier === 'pikachu' || identifier === 25) {
+      if (identifier === 'pikachu' || identifier === 25 || identifier === '25') {
         return {
           id: 25,
           name: 'pikachu',
@@ -389,15 +389,17 @@ describe('Nodes', () => {
       )).toBe(true);
     });
 
-    test('deve tratar tipo inválido', async () => {
+    test('deve tratar tipo inválido redirecionando para search', async () => {
       let state = createInitialState();
       state.userInput = 'tipoinvalido';
       
       const newState = await nodes.type_search(state);
       
+      // Agora processa automaticamente como Pokémon e limpa o input
+      expect(newState.currentNode).toBe('search');
+      expect(newState.userInput).toBe('');
       expect(newState.messages.some(m => 
-        m.content.includes('não encontrado') ||
-        m.content.includes('Erro')
+        m.content.includes('tipoinvalido') || m.content.includes('não encontrado')
       )).toBe(true);
     });
 
@@ -410,6 +412,19 @@ describe('Nodes', () => {
       expect(newState.currentNode).toBe('menu');
       expect(newState.messages.some(m => 
         m.content.includes('Voltando ao menu')
+      )).toBe(true);
+    });
+
+    test('deve redirecionar para search quando input não é tipo válido', async () => {
+      let state = createInitialState();
+      state.userInput = 'tangela';
+      
+      const newState = await nodes.type_search(state);
+      
+      expect(newState.currentNode).toBe('search');
+      expect(newState.userInput).toBe('');
+      expect(newState.messages.some(m => 
+        m.content.includes('tangela') || m.content.includes('Tangela')
       )).toBe(true);
     });
   });

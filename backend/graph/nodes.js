@@ -473,6 +473,92 @@ const typeSearchNode = async (state) => {
     return newState;
   }
 
+  // Lista de tipos válidos de Pokémon
+  const validTypes = [
+    'normal', 'fire', 'water', 'grass', 'electric', 'ice',
+    'fighting', 'poison', 'ground', 'flying', 'psychic',
+    'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'
+  ];
+
+  // Se não for um tipo válido, assume que é nome de Pokémon e processa automaticamente
+  if (!validTypes.includes(input)) {
+    console.log('[NODE] typeSearchNode - Input não é tipo válido, processando como Pokémon');
+    
+    try {
+      // Buscar Pokémon diretamente
+      const pokemon = await pokeService.getPokemon(input);
+      const species = await pokeService.getSpecies(pokemon.speciesId);
+
+      const response = `
+✨ **${pokemon.nameCapitalized}** #${pokemon.id}
+
+📝 ${species.description}
+
+🏷️ **Tipo(s):** ${pokemon.types.map(t => t.toUpperCase()).join(', ')}
+📏 **Altura:** ${pokemon.height}m
+⚖️ **Peso:** ${pokemon.weight}kg
+
+${utils.formatStats(pokemon.stats)}
+
+💫 **Habilidades:**
+${pokemon.abilities.map(a => `• ${a.name}${a.isHidden ? ' (oculta)' : ''}`).join('\n')}
+
+${species.isLegendary ? '👑 **Pokémon Lendário!**' : ''}
+${species.isMythical ? '✨ **Pokémon Mítico!**' : ''}
+
+---
+O que você quer fazer agora?
+• Digite outro Pokémon para buscar
+• Digite "evoluir" para ver a cadeia evolutiva
+• Digite "menu" para voltar ao menu principal`;
+
+      newState = utils.addMessage(newState, 'assistant', response, pokemon);
+      newState = utils.updateContext(newState, {
+        pokemonData: pokemon,
+        waitingFor: 'next_action',
+        lastError: null
+      });
+      newState = utils.incrementInteraction(newState);
+      newState.userInput = '';
+      newState.currentNode = 'search';
+      return newState;
+      
+    } catch (error) {
+      console.error('[ERROR] typeSearchNode - Erro ao buscar Pokémon:', error.message);
+      
+      let errorMessage = '';
+      if (error.message === 'POKEMON_NOT_FOUND') {
+        try {
+          const suggestions = await pokeService.searchPokemon(input, 5);
+          if (suggestions.length > 0) {
+            errorMessage = `
+❌ Pokémon "${input}" não encontrado.
+
+🤔 Você quis dizer:
+${suggestions.map(s => `• ${s}`).join('\n')}
+
+Tente novamente ou digite "menu" para voltar.`;
+          } else {
+            errorMessage = `❌ Pokémon "${input}" não encontrado.\n\nTente outro nome ou número, ou digite "menu" para voltar.`;
+          }
+        } catch (e) {
+          errorMessage = `❌ Pokémon "${input}" não encontrado.\n\nTente outro nome ou número, ou digite "menu" para voltar.`;
+        }
+      } else {
+        errorMessage = `❌ Erro ao buscar Pokémon: ${error.message}\n\nTente novamente ou digite "menu" para voltar.`;
+      }
+
+      newState = utils.addMessage(newState, 'assistant', errorMessage);
+      newState = utils.updateContext(newState, {
+        lastError: error.message,
+        waitingFor: 'pokemon_input'
+      });
+      newState.userInput = '';
+      newState.currentNode = 'search';
+      return newState;
+    }
+  }
+
   try {
     const pokemonList = await pokeService.getPokemonByType(input);
 
