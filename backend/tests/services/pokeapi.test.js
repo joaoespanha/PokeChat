@@ -3,7 +3,7 @@
  * Execute com: npm test
  */
 
-const PokeAPIService = require('../services/pokeapi');
+const PokeAPIService = require('../../services/pokeapi');
 
 // Mock do fetch global
 global.fetch = jest.fn();
