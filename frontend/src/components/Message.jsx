@@ -2,6 +2,8 @@
 import React from 'react';
 import PokemonCard from './PokemonCard';
 import ComparisonTable from './ComparisonTable';
+import EvolutionChain from './EvolutionChain';
+import TypeResults from './TypeResults';
 
 // Simple markdown-to-HTML converter
 const toHtml = (text) => {
@@ -23,6 +25,14 @@ const Message = ({ message }) => {
     }
     if (data && data.id) {
       return <PokemonCard pokemon={data} />;
+    }
+    if (data && Array.isArray(data) && data.length > 0 && data[0].name) {
+      // Decidir entre cadeia de evolução (objetos com stats/sprites) e lista de tipo (objetos com url)
+      const looksLikeTypeList = Object.prototype.hasOwnProperty.call(data[0], 'url') && !data[0].stats;
+      if (looksLikeTypeList) {
+        return <TypeResults results={data} />;
+      }
+      return <EvolutionChain evolutionChain={data} />;
     }
     // Default: render text content with simple markdown
     return <p dangerouslySetInnerHTML={toHtml(content)} />;

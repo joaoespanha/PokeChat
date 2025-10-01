@@ -505,11 +505,34 @@ const evolutionNode = async (state) => {
     const species = await pokeService.getSpecies(pokemon.speciesId);
     const evolutionChain = await pokeService.getEvolutionChain(species.evolutionChainId);
 
-    const response = botMessages.createEvolutionMessage(pokemon, evolutionChain);
+    // Garantir que cada item da cadeia contenha dados completos do Pokémon (id, sprites, stats)
+    const enrichedEvolutionChain = await Promise.all(
+      evolutionChain.map(async (evo) => {
+        try {
+          // Se já vier completo com id e sprites, usa como está; caso contrário, busca novamente
+          if (evo && evo.id && evo.sprites && (evo.sprites.official || evo.sprites.front)) {
+            return evo;
+          }
+          return await pokeService.getPokemon(evo.name || evo.id);
+        } catch (e) {
+          // Em caso de falha para um item, retorna estrutura mínima com nome para não quebrar UI
+          return {
+            id: evo.id || null,
+            name: evo.name || 'unknown',
+            nameCapitalized: evo.nameCapitalized || (evo.name ? evo.name.charAt(0).toUpperCase() + evo.name.slice(1) : 'Unknown'),
+            types: evo.types || [],
+            stats: evo.stats || null,
+            sprites: evo.sprites || { front: null, frontShiny: null, official: null }
+          };
+        }
+      })
+    );
 
-    newState = utils.addMessage(newState, 'assistant', response, evolutionChain);
+    const response = botMessages.createEvolutionMessage(pokemon, enrichedEvolutionChain);
+
+    newState = utils.addMessage(newState, 'assistant', response, enrichedEvolutionChain);
     newState = utils.updateContext(newState, {
-      evolutionChain,
+      evolutionChain: enrichedEvolutionChain,
       waitingFor: 'next_action',
       lastError: null
     });
