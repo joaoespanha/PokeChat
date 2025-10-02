@@ -6,7 +6,7 @@ export const startSession = async () => {
     method: 'POST',
   });
   if (!response.ok) {
-    throw new Error('Failed to start session');
+    throw new Error('Falha ao iniciar sessão');
   }
   return response.json();
 };
@@ -20,7 +20,7 @@ export const postMessage = async (sessionId, message) => {
     body: JSON.stringify({ sessionId, message }),
   });
   if (!response.ok) {
-    throw new Error('Failed to send message');
+    throw new Error('Falha ao enviar mensagem');
   }
   return response.json();
 };

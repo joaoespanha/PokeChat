@@ -3,8 +3,8 @@ services:
     build: ./backend
     container_name: pokechat-backend
     ports:
-      - "3000:3000" # Exposes backend API
-      - "9229:9229" # Optional: For debugging
+      - "3000:3000" 
+      - "9229:9229" 
     volumes:
       - ./backend/logs:/usr/src/app/logs
     environment:
@@ -16,7 +16,7 @@ services:
     build: ./frontend
     container_name: pokechat-frontend
     ports:
-      - "5173:5173" # Exposes Vite dev server
+      - "5173:5173" 
     depends_on:
       - backend
     environment:

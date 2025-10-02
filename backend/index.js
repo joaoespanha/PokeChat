@@ -3,7 +3,7 @@
  * Entry point for the PokéChat API server
  */
 
-// Load environment variables
+
 require('dotenv').config();
 
 const app = require('./app');
