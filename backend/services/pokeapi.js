@@ -35,8 +35,8 @@ class PokeAPIService {
         }
       }
 
+      const startTime = Date.now();
       try {
-        const startTime = Date.now();
         logger.http(`Making API request to ${endpoint}`);
         const response = await fetch(url);
   

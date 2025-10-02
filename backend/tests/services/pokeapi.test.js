@@ -300,9 +300,82 @@ describe('PokeAPIService', () => {
     };
 
     test('deve buscar cadeia de evolução', async () => {
+      // Mock the evolution chain API call
       fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockEvolutionData
+      });
+
+      // Mock the individual Pokemon API calls that _formatEvolutionChain makes
+      const mockBulbasaurData = {
+        id: 1,
+        name: 'bulbasaur',
+        types: [{ type: { name: 'grass' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 45 },
+          { stat: { name: 'attack' }, base_stat: 49 },
+          { stat: { name: 'defense' }, base_stat: 49 },
+          { stat: { name: 'special-attack' }, base_stat: 65 },
+          { stat: { name: 'special-defense' }, base_stat: 65 },
+          { stat: { name: 'speed' }, base_stat: 45 }
+        ],
+        abilities: [{ ability: { name: 'overgrow' }, is_hidden: false }],
+        sprites: { front_default: 'bulbasaur.png' },
+        height: 7,
+        weight: 69,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/1/' }
+      };
+
+      const mockIvysaurData = {
+        id: 2,
+        name: 'ivysaur',
+        types: [{ type: { name: 'grass' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 60 },
+          { stat: { name: 'attack' }, base_stat: 62 },
+          { stat: { name: 'defense' }, base_stat: 63 },
+          { stat: { name: 'special-attack' }, base_stat: 80 },
+          { stat: { name: 'special-defense' }, base_stat: 80 },
+          { stat: { name: 'speed' }, base_stat: 60 }
+        ],
+        abilities: [{ ability: { name: 'overgrow' }, is_hidden: false }],
+        sprites: { front_default: 'ivysaur.png' },
+        height: 10,
+        weight: 130,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/2/' }
+      };
+
+      const mockVenusaurData = {
+        id: 3,
+        name: 'venusaur',
+        types: [{ type: { name: 'grass' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 80 },
+          { stat: { name: 'attack' }, base_stat: 82 },
+          { stat: { name: 'defense' }, base_stat: 83 },
+          { stat: { name: 'special-attack' }, base_stat: 100 },
+          { stat: { name: 'special-defense' }, base_stat: 100 },
+          { stat: { name: 'speed' }, base_stat: 80 }
+        ],
+        abilities: [{ ability: { name: 'overgrow' }, is_hidden: false }],
+        sprites: { front_default: 'venusaur.png' },
+        height: 20,
+        weight: 1000,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/3/' }
+      };
+
+      // Mock the individual Pokemon calls in the order they'll be made
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBulbasaurData
+      });
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockIvysaurData
+      });
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockVenusaurData
       });
 
       const result = await service.getEvolutionChain(1);
@@ -315,9 +388,82 @@ describe('PokeAPIService', () => {
     });
 
     test('deve capitalizar nomes das evoluções', async () => {
+      // Mock the evolution chain API call
       fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockEvolutionData
+      });
+
+      // Mock the individual Pokemon API calls
+      const mockBulbasaurData = {
+        id: 1,
+        name: 'bulbasaur',
+        types: [{ type: { name: 'grass' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 45 },
+          { stat: { name: 'attack' }, base_stat: 49 },
+          { stat: { name: 'defense' }, base_stat: 49 },
+          { stat: { name: 'special-attack' }, base_stat: 65 },
+          { stat: { name: 'special-defense' }, base_stat: 65 },
+          { stat: { name: 'speed' }, base_stat: 45 }
+        ],
+        abilities: [{ ability: { name: 'overgrow' }, is_hidden: false }],
+        sprites: { front_default: 'bulbasaur.png' },
+        height: 7,
+        weight: 69,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/1/' }
+      };
+
+      const mockIvysaurData = {
+        id: 2,
+        name: 'ivysaur',
+        types: [{ type: { name: 'grass' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 60 },
+          { stat: { name: 'attack' }, base_stat: 62 },
+          { stat: { name: 'defense' }, base_stat: 63 },
+          { stat: { name: 'special-attack' }, base_stat: 80 },
+          { stat: { name: 'special-defense' }, base_stat: 80 },
+          { stat: { name: 'speed' }, base_stat: 60 }
+        ],
+        abilities: [{ ability: { name: 'overgrow' }, is_hidden: false }],
+        sprites: { front_default: 'ivysaur.png' },
+        height: 10,
+        weight: 130,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/2/' }
+      };
+
+      const mockVenusaurData = {
+        id: 3,
+        name: 'venusaur',
+        types: [{ type: { name: 'grass' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 80 },
+          { stat: { name: 'attack' }, base_stat: 82 },
+          { stat: { name: 'defense' }, base_stat: 83 },
+          { stat: { name: 'special-attack' }, base_stat: 100 },
+          { stat: { name: 'special-defense' }, base_stat: 100 },
+          { stat: { name: 'speed' }, base_stat: 80 }
+        ],
+        abilities: [{ ability: { name: 'overgrow' }, is_hidden: false }],
+        sprites: { front_default: 'venusaur.png' },
+        height: 20,
+        weight: 1000,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/3/' }
+      };
+
+      // Mock the individual Pokemon calls
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockBulbasaurData
+      });
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockIvysaurData
+      });
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockVenusaurData
       });
 
       const result = await service.getEvolutionChain(1);
@@ -335,9 +481,36 @@ describe('PokeAPIService', () => {
         }
       };
 
+      // Mock the evolution chain API call
       fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockSingleEvolution
+      });
+
+      // Mock the individual Pokemon API call for ditto
+      const mockDittoData = {
+        id: 132,
+        name: 'ditto',
+        types: [{ type: { name: 'normal' } }],
+        stats: [
+          { stat: { name: 'hp' }, base_stat: 48 },
+          { stat: { name: 'attack' }, base_stat: 48 },
+          { stat: { name: 'defense' }, base_stat: 48 },
+          { stat: { name: 'special-attack' }, base_stat: 48 },
+          { stat: { name: 'special-defense' }, base_stat: 48 },
+          { stat: { name: 'speed' }, base_stat: 48 }
+        ],
+        abilities: [{ ability: { name: 'limber' }, is_hidden: false }],
+        sprites: { front_default: 'ditto.png' },
+        height: 3,
+        weight: 40,
+        species: { url: 'https://pokeapi.co/api/v2/pokemon-species/132/' }
+      };
+
+      // Mock the individual Pokemon call
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockDittoData
       });
 
       const result = await service.getEvolutionChain(1);

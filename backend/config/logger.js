@@ -29,16 +29,18 @@ winston.addColors(colors);
 
 // Define which transports the logger must use
 const transports = [
-  // Console transport for development
-  new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-      winston.format.colorize({ all: true }),
-      winston.format.printf(
-        (info) => `${info.timestamp} ${info.level}: ${info.message}`
-      )
-    ),
-  }),
+  // Console transport for development (disabled during tests)
+  ...(process.env.NODE_ENV !== 'test' ? [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+        winston.format.colorize({ all: true }),
+        winston.format.printf(
+          (info) => `${info.timestamp} ${info.level}: ${info.message}`
+        )
+      ),
+    })
+  ] : []),
   // File transport for errors
   new winston.transports.File({
     filename: path.join(__dirname, '../logs/error.log'),
