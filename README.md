@@ -67,6 +67,40 @@ docker-compose up --build
 
 ### 🖥️ Opção 2: Executando Localmente
 
+#### ⚙️ Configuração de Variáveis de Ambiente
+
+Antes de executar a aplicação localmente, você precisará criar arquivos `.env` em ambos os diretórios (backend e frontend) seguindo os exemplos abaixo:
+
+**Backend** - Crie o arquivo `backend/.env`:
+```env
+# Backend Environment Variables
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# CORS Configuration
+FRONTEND_URL=http://localhost:5173
+
+# PokeAPI Configuration
+POKEAPI_BASE_URL=https://pokeapi.co/api/v2
+
+# Logging Configuration
+LOG_LEVEL=debug
+
+# Monitoring Configuration
+MONITORING_ENABLED=true
+MONITORING_HOST=localhost
+
+```
+
+**Frontend** - Crie o arquivo `frontend/.env`:
+```env
+# URL da API do backend (opcional, padrão: http://localhost:3000/api/chat)
+VITE_API_URL=http://localhost:3000/api/chat
+# Development/Production Environment
+VITE_NODE_ENV=development
+```
+
 #### Backend
 
 1. **Navegue para o diretório do backend:**
@@ -74,12 +108,14 @@ docker-compose up --build
 cd backend
 ```
 
-2. **Instale as dependências:**
+2. **Crie o arquivo `.env`** com as variáveis de ambiente conforme mostrado acima
+
+3. **Instale as dependências:**
 ```bash
 npm install
 ```
 
-3. **Execute o servidor:**
+4. **Execute o servidor:**
 ```bash
 npm start
 ```
@@ -93,12 +129,14 @@ O backend estará disponível em: http://localhost:3000
 cd frontend
 ```
 
-2. **Instale as dependências:**
+2. **Crie o arquivo `.env`** com as variáveis de ambiente conforme mostrado acima
+
+3. **Instale as dependências:**
 ```bash
 npm install
 ```
 
-3. **Execute o servidor de desenvolvimento:**
+4. **Execute o servidor de desenvolvimento:**
 ```bash
 npm run dev
 ```
