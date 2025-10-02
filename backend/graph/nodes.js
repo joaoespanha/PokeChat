@@ -141,8 +141,6 @@ const utils = {
 // NÓ 1: START (Boas-vindas)
 // ============================================
 const startNode = async (state) => {
-  console.log('[NODE] startNode - Iniciando conversa');
-
   let newState = utils.addMessage(state, 'assistant', botMessages.WELCOME_MESSAGE);
   newState = utils.updateContext(newState, { 
     waitingFor: 'menu_choice',
@@ -158,13 +156,10 @@ const startNode = async (state) => {
 // NÓ 2: MENU (Roteamento)
 // ============================================
 const menuNode = async (state) => {
-  console.log('[NODE] menuNode - Processando escolha do menu');
-
   const input = state.userInput.toLowerCase().trim();
   
   // Se não há input (acabou de entrar do start ou de outro nó), apenas mantém o estado
   if (!input) {
-    console.log('[NODE] menuNode - Sem input, aguardando escolha do usuário');
     return {
       ...state,
       currentNode: 'menu',
@@ -244,13 +239,10 @@ const menuNode = async (state) => {
 // NÓ 3: SEARCH (Buscar Pokémon)
 // ============================================
 const searchNode = async (state) => {
-  console.log('[NODE] searchNode - Buscando Pokémon');
-
   const input = state.userInput.trim().toLowerCase();
   
   // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
   if (!input) {
-    console.log('[NODE] searchNode - Sem input, aguardando nome do Pokémon');
     return {
       ...state,
       currentNode: 'search',
@@ -321,8 +313,6 @@ const searchNode = async (state) => {
     newState.currentNode = 'search';
 
   } catch (error) {
-    console.error('[ERROR] searchNode:', error.message);
-
     let errorMessage = '';
     
     if (error.message === 'POKEMON_NOT_FOUND') {
@@ -359,13 +349,10 @@ const searchNode = async (state) => {
 // NÓ 4: COMPARE (Comparar Pokémon)
 // ============================================
 const compareNode = async (state) => {
-  console.log('[NODE] compareNode - Comparando Pokémon');
-
   const input = state.userInput.trim();
   
   // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
   if (!input) {
-    console.log('[NODE] compareNode - Sem input, aguardando nomes dos Pokémon');
     return {
       ...state,
       currentNode: 'compare',
@@ -431,8 +418,6 @@ const compareNode = async (state) => {
     newState.currentNode = 'compare';
 
   } catch (error) {
-    console.error('[ERROR] compareNode:', error.message);
-
     const errorMessage = botMessages.createCompareError(error.message);
     
     newState = utils.addMessage(newState, 'assistant', errorMessage);
@@ -453,13 +438,10 @@ const compareNode = async (state) => {
 // NÓ 5: EVOLUTION (Cadeia de Evolução)
 // ============================================
 const evolutionNode = async (state) => {
-  console.log('[NODE] evolutionNode - Buscando evolução');
-
   const input = state.userInput.trim();
   
   // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
   if (!input) {
-    console.log('[NODE] evolutionNode - Sem input, aguardando nome do Pokémon');
     return {
       ...state,
       currentNode: 'evolution',
@@ -543,8 +525,6 @@ const evolutionNode = async (state) => {
     newState.currentNode = 'evolution';
 
   } catch (error) {
-    console.error('[ERROR] evolutionNode:', error.message);
-
     const errorMessage = botMessages.createEvolutionError(error.message);
     
     newState = utils.addMessage(newState, 'assistant', errorMessage);
@@ -564,13 +544,10 @@ const evolutionNode = async (state) => {
 // NÓ 6: TYPE_SEARCH (Buscar por Tipo)
 // ============================================
 const typeSearchNode = async (state) => {
-  console.log('[NODE] typeSearchNode - Buscando por tipo');
-
   const input = state.userInput.trim().toLowerCase();
   
   // Se não há input (primeira entrada no nó), apenas mantém o estado e define waitingFor
   if (!input) {
-    console.log('[NODE] typeSearchNode - Sem input, aguardando tipo de Pokémon');
     return {
       ...state,
       currentNode: 'type_search',
@@ -624,8 +601,6 @@ const typeSearchNode = async (state) => {
   if (!validTypes.includes(input)) {
     // Se já mostrou lista de tipo, tentar buscar como Pokémon
     if (hasShownTypeList) {
-      console.log('[NODE] typeSearchNode - Tentando buscar Pokémon após lista de tipo');
-      
       try {
         const pokemon = await pokeService.getPokemon(input);
         const species = await pokeService.getSpecies(pokemon.speciesId);
@@ -644,8 +619,6 @@ const typeSearchNode = async (state) => {
         newState.currentNode = 'type_search'; // Permanece em type_search
         return newState;
       } catch (error) {
-        console.error('[ERROR] typeSearchNode - Erro ao buscar Pokémon:', error.message);
-        
         let errorMessage = '';
         if (error.message === 'POKEMON_NOT_FOUND') {
           try {
@@ -674,8 +647,6 @@ const typeSearchNode = async (state) => {
     }
     
     // Se não mostrou lista ainda, exigir tipo válido
-    console.log('[NODE] typeSearchNode - Input não é tipo válido');
-    
     const errorMessage = botMessages.TYPE_SEARCH_INVALID_INPUT(input);
 
     newState = utils.addMessage(newState, 'assistant', errorMessage);
@@ -707,8 +678,6 @@ const typeSearchNode = async (state) => {
     newState.currentNode = 'type_search';
 
   } catch (error) {
-    console.error('[ERROR] typeSearchNode:', error.message);
-
     const errorMessage = botMessages.TYPE_SEARCH_INVALID(input);
     
     newState = utils.addMessage(newState, 'assistant', errorMessage);
@@ -728,8 +697,6 @@ const typeSearchNode = async (state) => {
 // NÓ 7: END (Finalizar)
 // ============================================
 const endNode = async (state) => {
-  console.log('[NODE] endNode - Finalizando conversa');
-
   const sessionDuration = Date.now() - state.metadata.startTime;
   const minutes = Math.floor(sessionDuration / 60000);
   const seconds = Math.floor((sessionDuration % 60000) / 1000);

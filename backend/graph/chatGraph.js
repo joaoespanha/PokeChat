@@ -292,18 +292,7 @@ class PokemonChatbot {
   }
 
   visualizeGraph() {
-    console.log('\n=== ESTRUTURA DO GRAFO ===\n');
-    console.log('Nós:', Object.keys(this.graph.nodes));
-    console.log('\nTransições:');
-    console.log(`Ponto de Entrada → ${NODE_TYPES.START}`);
-    console.log(`${NODE_TYPES.START} → ${NODE_TYPES.MENU}`);
-    console.log(`${NODE_TYPES.MENU} → [${Object.values(NODE_TYPES).join(', ')}, END]`);
-    console.log(`${NODE_TYPES.SEARCH} → [${NODE_TYPES.SEARCH}, ${NODE_TYPES.EVOLUTION}, ${NODE_TYPES.MENU}, END]`);
-    console.log(`${NODE_TYPES.COMPARE} → [${NODE_TYPES.COMPARE}, ${NODE_TYPES.MENU}, END]`);
-    console.log(`${NODE_TYPES.EVOLUTION} → [${NODE_TYPES.EVOLUTION}, ${NODE_TYPES.SEARCH}, ${NODE_TYPES.MENU}, END]`);
-    console.log(`${NODE_TYPES.TYPE_SEARCH} → [${NODE_TYPES.TYPE_SEARCH}, ${NODE_TYPES.SEARCH}, ${NODE_TYPES.MENU}, END]`);
-    console.log(`${NODE_TYPES.END} → END`);
-    console.log('\n=========================\n');
+    // Graph visualization removed to reduce test output noise
   }
 }
 

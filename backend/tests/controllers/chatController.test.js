@@ -12,6 +12,10 @@ const MockPokemonChatbot = jest.fn().mockImplementation(() => {
     processMessage: jest.fn().mockResolvedValue({ role: 'assistant', content: 'Mensagem processada' }),
     getMessageHistory: jest.fn().mockReturnValue([{ role: 'user', content: 'Histórico' }]),
     getSessionStats: jest.fn().mockReturnValue({ sessionId: mockSessionId, interactionCount: 1 }),
+    getCurrentState: jest.fn().mockReturnValue({ 
+      currentNode: 'menu', 
+      waitingFor: 'menu_choice' 
+    }),
     reset: jest.fn().mockResolvedValue({ role: 'assistant', content: 'Sessão resetada' }),
     currentState: {
       sessionId: mockSessionId,
@@ -76,7 +80,13 @@ const {
     describe('postMessage', () => {
       it('deve processar uma mensagem com sucesso e retornar 200', async () => {
         // Simula uma sessão existente
-        const chatbotMock = { processMessage: jest.fn().mockResolvedValue('OK') };
+        const chatbotMock = { 
+          processMessage: jest.fn().mockResolvedValue('OK'),
+          getCurrentState: jest.fn().mockReturnValue({ 
+            currentNode: 'search', 
+            waitingFor: 'pokemon_input' 
+          })
+        };
         mockActiveSessions.set('test-session', chatbotMock);
   
         req.body = { sessionId: 'test-session', message: 'Olá' };
@@ -85,7 +95,13 @@ const {
   
         expect(chatbotMock.processMessage).toHaveBeenCalledWith('Olá');
         expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({ response: 'OK' });
+        expect(res.json).toHaveBeenCalledWith({ 
+          response: 'OK',
+          currentState: {
+            node: 'search',
+            waitingFor: 'pokemon_input'
+          }
+        });
       });
   
       it('deve retornar 400 se faltar sessionId ou message', async () => {
