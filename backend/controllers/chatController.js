@@ -5,6 +5,7 @@
 const PokemonChatbot = require('../graph/chatGraph');
 const logger = require('../config/logger');
 const { metrics } = require('../config/monitoring');
+const { HTTP_STATUS_CODES, ERROR_MESSAGES } = require('../constants');
 
 // Armazena as instâncias ativas do chatbot em memória
 // Em um ambiente de produção, considere usar um banco de dados como Redis
@@ -34,7 +35,7 @@ const startSession = async (req, res) => {
       ip: req.ip 
     });
 
-    res.status(201).json({
+    res.status(HTTP_STATUS_CODES.CREATED).json({
       sessionId,
       message: welcomeMessage,
       currentState: {
@@ -52,7 +53,7 @@ const startSession = async (req, res) => {
       stack: error.stack,
       ip: req.ip 
     });
-    res.status(500).json({ error: 'Não foi possível iniciar a sessão.' });
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.SESSION_CREATION_FAILED });
   }
 };
 
@@ -68,13 +69,13 @@ const postMessage = async (req, res) => {
       message: !!message,
       ip: req.ip 
     });
-    return res.status(400).json({ error: 'sessionId e message são obrigatórios.' });
+    return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({ error: ERROR_MESSAGES.INVALID_MESSAGE_REQUEST });
   }
 
   const chatbot = activeSessions.get(sessionId);
   if (!chatbot) {
     logger.warn('Message sent to non-existent session', { sessionId, ip: req.ip });
-    return res.status(404).json({ error: 'Sessão não encontrada.' });
+    return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.SESSION_NOT_FOUND });
   }
 
   try {
@@ -97,7 +98,7 @@ const postMessage = async (req, res) => {
       ip: req.ip 
     });
     
-    res.status(200).json({ 
+    res.status(HTTP_STATUS_CODES.OK).json({ 
       response,
       currentState: {
         node: currentState.currentNode,
@@ -114,7 +115,7 @@ const postMessage = async (req, res) => {
       stack: error.stack,
       ip: req.ip 
     });
-    res.status(500).json({ error: 'Erro ao processar a mensagem.' });
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.MESSAGE_PROCESSING_FAILED });
   }
 };
 
@@ -127,11 +128,11 @@ const getHistory = (req, res) => {
 
   if (!chatbot) {
     logger.warn('History requested for non-existent session', { sessionId, ip: req.ip });
-    return res.status(404).json({ error: 'Sessão não encontrada.' });
+    return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.SESSION_NOT_FOUND });
   }
 
   logger.http('Chat history requested', { sessionId, ip: req.ip });
-  res.status(200).json(chatbot.getMessageHistory());
+  res.status(HTTP_STATUS_CODES.OK).json(chatbot.getMessageHistory());
 };
 
 /**
@@ -143,11 +144,11 @@ const getStats = (req, res) => {
 
   if (!chatbot) {
     logger.warn('Stats requested for non-existent session', { sessionId, ip: req.ip });
-    return res.status(404).json({ error: 'Sessão não encontrada.' });
+    return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.SESSION_NOT_FOUND });
   }
 
   logger.http('Session stats requested', { sessionId, ip: req.ip });
-  res.status(200).json(chatbot.getSessionStats());
+  res.status(HTTP_STATUS_CODES.OK).json(chatbot.getSessionStats());
 };
 
 /**
@@ -159,7 +160,7 @@ const resetSession = async (req, res) => {
 
     if (!chatbot) {
         logger.warn('Reset requested for non-existent session', { sessionId, ip: req.ip });
-        return res.status(404).json({ error: 'Sessão não encontrada.' });
+        return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.SESSION_NOT_FOUND });
     }
 
     try {
@@ -167,7 +168,7 @@ const resetSession = async (req, res) => {
         const welcomeMessage = await chatbot.reset();
         
         logger.info('Session reset successfully', { sessionId, ip: req.ip });
-        res.status(200).json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             sessionId,
             message: welcomeMessage
         });
@@ -178,7 +179,7 @@ const resetSession = async (req, res) => {
             stack: error.stack,
             ip: req.ip 
         });
-        res.status(500).json({ error: 'Não foi possível resetar a sessão.' });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.SESSION_RESET_FAILED });
     }
 };
 
@@ -197,10 +198,10 @@ const deleteSession = (req, res) => {
     metrics.setActiveChatSessions(activeSessions.size);
     
     logger.info('Session deleted successfully', { sessionId, ip: req.ip });
-    res.status(200).json({ message: 'Sessão encerrada com sucesso.' });
+    res.status(HTTP_STATUS_CODES.OK).json({ message: ERROR_MESSAGES.SESSION_DELETED });
   } else {
     logger.warn('Delete requested for non-existent session', { sessionId, ip: req.ip });
-    res.status(404).json({ error: 'Sessão não encontrada.' });
+    res.status(HTTP_STATUS_CODES.NOT_FOUND).json({ error: ERROR_MESSAGES.SESSION_NOT_FOUND });
   }
 };
 
@@ -213,7 +214,7 @@ const listSessions = (req, res) => {
     const bot = activeSessions.get(sessionId);
     return bot.getSessionStats();
   });
-  res.status(200).json({ sessions });
+  res.status(HTTP_STATUS_CODES.OK).json({ sessions });
 };
 
 
