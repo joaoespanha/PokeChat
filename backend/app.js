@@ -1,5 +1,4 @@
 /**
- * Express Application Configuration
  * Configuração da aplicação Express do PokéChat
  */
 
@@ -14,25 +13,25 @@ const { HTTP_STATUS_CODES, ERROR_MESSAGES } = require('./constants');
 const app = express();
 
 // ============================================
-// CORS CONFIGURATION
+// CONFIGURAÇÃO CORS
 // ============================================
 
 // Middleware CORS - permite requisições do frontend
 app.use(cors({
-  origin: true, // Allow all origins in development
+  origin: true, // Permite todas as origens em desenvolvimento
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Additional CORS headers for all responses
+// Cabeçalhos CORS adicionais para todas as respostas
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
-  // Handle preflight requests
+  // Tratar requisições preflight
   if (req.method === 'OPTIONS') {
     res.sendStatus(HTTP_STATUS_CODES.OK);
   } else {
@@ -48,15 +47,15 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // ============================================
-// MONITORING MIDDLEWARE
+// MIDDLEWARE DE MONITORAMENTO
 // ============================================
 
 // Express Status Monitor
 const expressStatusMonitor = require('express-status-monitor')(statusMonitorConfig);
 app.use(expressStatusMonitor);
-logger.info('Express Status Monitor configured');
+logger.info('Express Status Monitor configurado');
 
-// Request timing middleware
+// Middleware de tempo de requisição
 app.use((req, res, next) => {
   const start = Date.now();
   
@@ -68,31 +67,31 @@ app.use((req, res, next) => {
   
   next();
 });
-logger.info('HTTP request monitoring middleware configured');
+logger.info('Middleware de monitoramento de requisições HTTP configurado');
 
 // ============================================
 // ROUTES
 // ============================================
 
-// Rota de Health Check
+// Rota de Verificação de Saúde
 app.get('/health', (req, res) => {
   logger.http(`Health check requested from ${req.ip}`);
   res.status(HTTP_STATUS_CODES.OK).json({ status: 'ok', timestamp: new Date() });
 });
 
 // ============================================
-// MONITORING ENDPOINTS
+// ENDPOINTS DE MONITORAMENTO
 // ============================================
 
-// Prometheus metrics endpoint
+// Endpoint de métricas Prometheus
 app.get('/metrics', async (req, res) => {
   try {
     res.set('Content-Type', register.contentType);
     const metricsData = await register.metrics();
     res.end(metricsData);
-    logger.http('Prometheus metrics requested');
+    logger.http('Métricas Prometheus solicitadas');
   } catch (error) {
-    logger.error('Failed to generate metrics', { error: error.message });
+    logger.error('Falha ao gerar métricas', { error: error.message });
     res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ error: ERROR_MESSAGES.METRICS_GENERATION_FAILED });
   }
 });
@@ -104,7 +103,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/monitoring', monitoringRoutes);
 
 // ============================================
-// ERROR HANDLING
+// TRATAMENTO DE ERROS
 // ============================================
 
 // Tratamento de rotas não encontradas

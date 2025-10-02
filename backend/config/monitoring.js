@@ -1,28 +1,28 @@
 /**
- * Monitoring Configuration
+ * Configuração de Monitoramento
  * Configuração de monitoramento com Prometheus e express-status-monitor
  */
 
 const client = require('prom-client');
 const logger = require('./logger');
 
-// Create a Registry to register the metrics
+// Criar um Registry para registrar as métricas
 const register = new client.Registry();
 
-// Add a default label which is added to all metrics
+// Adicionar um rótulo padrão que é adicionado a todas as métricas
 register.setDefaultLabels({
   app: 'pokechat-backend',
   version: '1.0.0'
 });
 
-// Enable the collection of default metrics
+// Habilitar a coleta de métricas padrão
 client.collectDefaultMetrics({ register });
 
 // ============================================
-// CUSTOM METRICS
+// MÉTRICAS PERSONALIZADAS
 // ============================================
 
-// Chat Session Metrics
+// Métricas de Sessão de Chat
 const chatSessionsTotal = new client.Counter({
   name: 'chat_sessions_total',
   help: 'Total number of chat sessions created',
@@ -40,7 +40,7 @@ const chatMessagesTotal = new client.Counter({
   labelNames: ['session_id', 'node_type']
 });
 
-// Pokemon API Metrics
+// Métricas da API Pokémon
 const pokemonApiRequestsTotal = new client.Counter({
   name: 'pokemon_api_requests_total',
   help: 'Total number of Pokemon API requests',
@@ -64,14 +64,14 @@ const pokemonCacheMisses = new client.Counter({
   help: 'Total number of Pokemon API cache misses'
 });
 
-// Error Metrics
+// Métricas de Erro
 const errorsTotal = new client.Counter({
   name: 'errors_total',
   help: 'Total number of errors',
   labelNames: ['type', 'component']
 });
 
-// Response Time Metrics
+// Métricas de Tempo de Resposta
 const httpRequestDuration = new client.Histogram({
   name: 'http_request_duration_seconds',
   help: 'Duration of HTTP requests in seconds',
@@ -86,7 +86,7 @@ const httpRequestsTotal = new client.Counter({
 });
 
 // ============================================
-// REGISTER METRICS
+// REGISTRAR MÉTRICAS
 // ============================================
 
 register.registerMetric(chatSessionsTotal);
@@ -101,11 +101,11 @@ register.registerMetric(httpRequestDuration);
 register.registerMetric(httpRequestsTotal);
 
 // ============================================
-// METRIC HELPERS
+// AUXILIARES DE MÉTRICAS
 // ============================================
 
 const metrics = {
-  // Chat metrics
+  // Métricas de chat
   incrementChatSessions: (status = 'created') => {
     chatSessionsTotal.inc({ status });
     logger.debug(`Chat session metric incremented: ${status}`);
@@ -121,7 +121,7 @@ const metrics = {
     logger.debug(`Chat message metric incremented: ${sessionId} - ${nodeType}`);
   },
   
-  // Pokemon API metrics
+  // Métricas da API Pokémon
   incrementPokemonApiRequests: (endpoint, status = 'success') => {
     pokemonApiRequestsTotal.inc({ endpoint, status });
     logger.debug(`Pokemon API request metric incremented: ${endpoint} - ${status}`);
@@ -142,13 +142,13 @@ const metrics = {
     logger.debug('Pokemon cache miss metric incremented');
   },
   
-  // Error metrics
+  // Métricas de erro
   incrementErrors: (type, component) => {
     errorsTotal.inc({ type, component });
     logger.warn(`Error metric incremented: ${type} - ${component}`);
   },
   
-  // HTTP metrics
+  // Métricas HTTP
   recordHttpRequest: (method, route, statusCode, duration) => {
     httpRequestsTotal.inc({ method, route, status_code: statusCode });
     httpRequestDuration.observe({ method, route, status_code: statusCode }, duration);
@@ -157,7 +157,7 @@ const metrics = {
 };
 
 // ============================================
-// EXPRESS STATUS MONITOR CONFIG
+// CONFIGURAÇÃO DO EXPRESS STATUS MONITOR
 // ============================================
 
 const statusMonitorConfig = {

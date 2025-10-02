@@ -27,7 +27,7 @@ class PokeAPIService {
       if (useCache && this.cache.has(cacheKey)) {
         const cached = this.cache.get(cacheKey);
         if (Date.now() - cached.timestamp < this.cacheExpiry) {
-          logger.debug(`Cache hit for ${endpoint}`);
+          logger.debug(`Cache hit para ${endpoint}`);
           metrics.incrementCacheHits();
           return cached.data;
         } else {
@@ -37,7 +37,7 @@ class PokeAPIService {
 
       const startTime = Date.now();
       try {
-        logger.http(`Making API request to ${endpoint}`);
+        logger.http(`Fazendo requisição à API para ${endpoint}`);
         const response = await fetch(url);
   
         if (!response.ok) {
@@ -45,11 +45,11 @@ class PokeAPIService {
           metrics.recordPokemonApiDuration(endpoint, duration);
           
           if (response.status === 404) {
-            logger.warn(`Pokemon not found: ${endpoint}`);
+            logger.warn(`Pokémon não encontrado: ${endpoint}`);
             metrics.incrementPokemonApiRequests(endpoint, 'not_found');
             throw new Error('POKEMON_NOT_FOUND');
           }
-          logger.error(`API error ${response.status} for ${endpoint}`);
+          logger.error(`Erro da API ${response.status} para ${endpoint}`);
           metrics.incrementPokemonApiRequests(endpoint, 'error');
           throw new Error(`API_ERROR: ${response.status}`);
         }
@@ -57,12 +57,12 @@ class PokeAPIService {
         const data = await response.json();
         const duration = (Date.now() - startTime) / 1000;
         
-        // Update monitoring metrics
+        // Atualizar métricas de monitoramento
         metrics.incrementPokemonApiRequests(endpoint, 'success');
         metrics.recordPokemonApiDuration(endpoint, duration);
         metrics.incrementCacheMisses();
         
-        logger.debug(`API request successful for ${endpoint}`);
+        logger.debug(`Requisição à API bem-sucedida para ${endpoint}`);
 
         // Armazenar no cache
         if (useCache) {
@@ -70,7 +70,7 @@ class PokeAPIService {
             data,
             timestamp: Date.now()
           });
-          logger.debug(`Data cached for ${endpoint}`);
+          logger.debug(`Dados armazenados em cache para ${endpoint}`);
         }
 
         return data;
@@ -79,13 +79,13 @@ class PokeAPIService {
           throw error;
         }
         
-        // Update monitoring metrics for network errors
+        // Atualizar métricas de monitoramento para erros de rede
         const duration = (Date.now() - startTime) / 1000;
         metrics.recordPokemonApiDuration(endpoint, duration);
         metrics.incrementPokemonApiRequests(endpoint, 'network_error');
         metrics.incrementErrors('api_request', 'pokeapi_service');
         
-        logger.error(`API request failed for ${endpoint}`, { 
+        logger.error(`Requisição à API falhou para ${endpoint}`, { 
           error: error.message,
           endpoint 
         });
@@ -100,7 +100,7 @@ class PokeAPIService {
      */
     async getPokemon(identifier) {
       if (!identifier) {
-        logger.warn('Invalid Pokemon identifier provided');
+        logger.warn('Identificador de Pokémon inválido fornecido');
         throw new Error('INVALID_IDENTIFIER');
       }
 
@@ -109,9 +109,9 @@ class PokeAPIService {
         ? identifier.toLowerCase().trim() 
         : identifier;
 
-      logger.info(`Fetching Pokemon data for: ${normalized}`);
+      logger.info(`Buscando dados do Pokémon para: ${normalized}`);
       const data = await this._fetch(`/pokemon/${normalized}`);
-      logger.debug(`Pokemon data retrieved successfully for: ${normalized}`);
+      logger.debug(`Dados do Pokémon recuperados com sucesso para: ${normalized}`);
       return this._formatPokemonData(data);
     }
   
@@ -122,14 +122,14 @@ class PokeAPIService {
      */
     async getMultiplePokemon(identifiers) {
       if (!Array.isArray(identifiers) || identifiers.length === 0) {
-        logger.warn('Invalid Pokemon identifiers array provided');
+        logger.warn('Array de identificadores de Pokémon inválido fornecido');
         throw new Error('INVALID_IDENTIFIERS');
       }
 
-      logger.info(`Fetching multiple Pokemon data for ${identifiers.length} Pokemon`);
+      logger.info(`Buscando dados de múltiplos Pokémon para ${identifiers.length} Pokémon`);
       const promises = identifiers.map(id => this.getPokemon(id));
       const results = await Promise.all(promises);
-      logger.debug(`Successfully retrieved data for ${results.length} Pokemon`);
+      logger.debug(`Dados recuperados com sucesso para ${results.length} Pokémon`);
       return results;
     }
   
@@ -206,7 +206,7 @@ class PokeAPIService {
      * @private
      */
     _formatPokemonData(data) {
-      // Defensive extraction for sprites and stats to avoid undefined fields
+      // Extração defensiva para sprites e stats para evitar campos indefinidos
       const officialArtwork = data?.sprites?.other?.['official-artwork']?.front_default || null;
       const frontDefault = data?.sprites?.front_default || null;
       const frontShiny = data?.sprites?.front_shiny || null;
@@ -308,7 +308,7 @@ class PokeAPIService {
     clearCache() {
       const previousSize = this.cache.size;
       this.cache.clear();
-      logger.info(`Cache cleared - removed ${previousSize} entries`);
+      logger.info(`Cache limpo - removidas ${previousSize} entradas`);
     }
   
     /**

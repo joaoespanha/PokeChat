@@ -1,12 +1,12 @@
 /**
- * Winston Logger Configuration
+ * Configuração do Logger Winston
  * Configuração centralizada de logging para o backend do PokéChat
  */
 
 const winston = require('winston');
 const path = require('path');
 
-// Define log levels
+// Define níveis de log
 const levels = {
   error: 0,
   warn: 1,
@@ -15,7 +15,7 @@ const levels = {
   debug: 4,
 };
 
-// Define colors for each level
+// Define cores para cada nível
 const colors = {
   error: 'red',
   warn: 'yellow',
@@ -24,12 +24,12 @@ const colors = {
   debug: 'white',
 };
 
-// Tell winston that you want to link the colors
+// Informar ao winston que você quer vincular as cores
 winston.addColors(colors);
 
-// Define which transports the logger must use
+// Define quais transportes o logger deve usar
 const transports = [
-  // Console transport for development (disabled during tests)
+  // Transporte de console para desenvolvimento (desabilitado durante testes)
   ...(process.env.NODE_ENV !== 'test' ? [
     new winston.transports.Console({
       format: winston.format.combine(
@@ -41,7 +41,7 @@ const transports = [
       ),
     })
   ] : []),
-  // File transport for errors
+  // Transporte de arquivo para erros
   new winston.transports.File({
     filename: path.join(__dirname, '../logs/error.log'),
     level: 'error',
@@ -50,7 +50,7 @@ const transports = [
       winston.format.json()
     ),
   }),
-  // File transport for all logs
+  // Transporte de arquivo para todos os logs
   new winston.transports.File({
     filename: path.join(__dirname, '../logs/combined.log'),
     format: winston.format.combine(
@@ -58,7 +58,7 @@ const transports = [
       winston.format.json()
     ),
   }),
-  // File transport for HTTP requests
+  // Transporte de arquivo para requisições HTTP
   new winston.transports.File({
     filename: path.join(__dirname, '../logs/http.log'),
     level: 'http',
@@ -69,14 +69,14 @@ const transports = [
   }),
 ];
 
-// Create the logger
+// Criar o logger
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'warn' : 'debug'),
   levels,
   transports,
 });
 
-// Create logs directory if it doesn't exist
+// Criar diretório de logs se não existir
 const fs = require('fs');
 const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) {

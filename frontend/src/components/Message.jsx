@@ -5,7 +5,7 @@ import ComparisonTable from './ComparisonTable';
 import EvolutionChain from './EvolutionChain';
 import TypeResults from './TypeResults';
 
-// Simple markdown-to-HTML converter
+// Conversor simples de markdown para HTML
 const toHtml = (text) => {
     let html = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -34,7 +34,7 @@ const Message = ({ message }) => {
       }
       return <EvolutionChain evolutionChain={data} />;
     }
-    // Default: render text content with simple markdown
+    // Padrão: renderizar conteúdo de texto com markdown simples
     return <p dangerouslySetInnerHTML={toHtml(content)} />;
   };
 

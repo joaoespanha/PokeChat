@@ -219,8 +219,8 @@ class PokemonChatbot {
           messageLength: userInput.length
         });
         
-        // This logic correctly invokes the specific node for the current state,
-        // which is a reliable pattern for this library version.
+        // Esta lógica invoca corretamente o nó específico para o estado atual,
+        // que é um padrão confiável para esta versão da biblioteca.
         const currentNodeName = this.currentState.currentNode;
         if (nodes[currentNodeName]) {
             this.currentState = await nodes[currentNodeName](this.currentState);
@@ -235,7 +235,7 @@ class PokemonChatbot {
         
         return this.getLastMessage();
     } catch (error) {
-      // Update monitoring metrics
+      // Atualizar métricas de monitoramento
       metrics.incrementErrors('message_processing', 'chat_graph');
       
       logger.error('Error processing chat message', {
@@ -292,7 +292,7 @@ class PokemonChatbot {
   }
 
   visualizeGraph() {
-    // Graph visualization removed to reduce test output noise
+    // Visualização do grafo removida para reduzir ruído na saída dos testes
   }
 }
 
