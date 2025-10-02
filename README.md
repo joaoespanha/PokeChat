@@ -22,7 +22,7 @@ O **PokéChat** é uma aplicação full-stack que combina:
 ## 🛠️ Tecnologias Utilizadas
 
 ### Backend
-- **Node.js** (>=18.0.0) - Runtime JavaScript
+- **Node.js** (Node 20 LTS) - Runtime JavaScript
 - **Express.js** - Framework web
 - **LangGraph** - Sistema de fluxo conversacional
 - **Prometheus** - Métricas e monitoramento
@@ -43,7 +43,7 @@ O **PokéChat** é uma aplicação full-stack que combina:
 
 ### Pré-requisitos
 
-- Node.js >= 18.0.0
+- Node.js 20 LTS
 - Docker e Docker Compose (opcional)
 - npm ou yarn
 
@@ -145,7 +145,138 @@ O frontend estará disponível em: http://localhost:5173
 
 ## 🧪 Executando os Testes
 
-### Backend
+### 📦 Opção 1: Testes em Docker (Recomendado)
+
+#### Executando Testes em Container Fresco (Recomendado)
+
+```bash
+# Executar todos os testes em um novo container (inicia, testa, para)
+docker-compose run --rm backend npm test
+
+# Executar testes com cobertura de código em container fresco
+docker-compose run --rm backend npm run test:coverage
+
+# Executar teste manual de integração com PokéAPI em container fresco
+docker-compose run --rm backend npm run test:manual
+
+# Executar testes específicos
+docker-compose run --rm backend npm test -- --testNamePattern="specific test name"
+```
+
+#### Executando Testes no Container em Execução (Alternativo)
+
+```bash
+# Executar todos os testes no container já em execução
+docker-compose exec backend npm test
+
+# Executar testes com cobertura de código no container em execução
+docker-compose exec backend npm run test:coverage
+
+# Executar testes em modo watch (re-executa ao salvar arquivos) - apenas em container em execução
+docker-compose exec backend npm run test:watch
+
+# Executar teste manual de integração com PokéAPI no container em execução
+docker-compose exec backend npm run test:manual
+```
+
+#### 🚀 Por que Usar Containers Frescos para Testes?
+
+**Vantagens dos containers frescos (`docker-compose run --rm`):**
+- ✅ **Ambiente limpo**: Cada teste roda em um container completamente novo
+- ✅ **Isolamento total**: Não há interferência de execuções anteriores
+- ✅ **Ideal para CI/CD**: Comportamento consistente em pipelines
+- ✅ **Limpeza automática**: Container é removido automaticamente após os testes
+- ✅ **Recursos otimizados**: Não mantém containers desnecessários rodando
+
+**Quando usar containers em execução (`docker-compose exec`):**
+- 🔄 **Desenvolvimento ativo**: Quando você está desenvolvendo e testando frequentemente
+- ⚡ **Modo watch**: Para execução contínua de testes durante desenvolvimento
+- 🐛 **Debugging**: Para investigar problemas dentro do container
+
+#### 🐳 Configuração Docker para Testes
+
+Para otimizar o ambiente Docker para testes, você pode criar um Dockerfile específico para desenvolvimento que inclui as dependências de teste:
+
+**backend/Dockerfile.dev** (opcional):
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies (including dev dependencies for testing)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose ports
+EXPOSE 3000 9229
+
+# Default command for development
+CMD ["npm", "start"]
+```
+
+**Para usar o Dockerfile de desenvolvimento:**
+```bash
+# Build com Dockerfile de desenvolvimento
+docker-compose -f docker-compose.dev.yml up --build
+
+# Ou modificar o docker-compose.yaml para usar o Dockerfile.dev
+```
+
+#### 📊 Acessando Relatórios de Cobertura em Docker
+
+**Para containers frescos (docker-compose run):**
+```bash
+# Executar testes com cobertura e manter relatórios
+docker-compose run --rm -v $(pwd)/backend/coverage:/usr/src/app/coverage backend npm run test:coverage
+
+# Os relatórios serão salvos automaticamente em ./backend/coverage/
+# Abrir relatório no navegador
+open backend/coverage/lcov-report/index.html
+```
+
+**Para containers em execução (docker-compose exec):**
+```bash
+# Após executar testes no container em execução
+docker-compose exec backend npm run test:coverage
+
+# Copiar relatório de cobertura do container para o host
+docker cp pokechat-backend:/usr/src/app/coverage/lcov-report ./backend/coverage/
+
+# Ou acessar diretamente no container
+docker-compose exec backend sh
+# Dentro do container: cat /usr/src/app/coverage/lcov-report/index.html
+```
+
+#### 🔧 Volume Mounting para Testes (Configuração Avançada)
+
+Para melhor integração com testes, adicione volumes ao `docker-compose.yaml`:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    container_name: pokechat-backend
+    ports:
+      - "3000:3000"
+      - "9229:9229"
+    volumes:
+      - ./backend/logs:/usr/src/app/logs
+      - ./backend/coverage:/usr/src/app/coverage  # Mount coverage reports
+      - ./backend/tests:/usr/src/app/tests        # Mount tests for watch mode
+    environment:
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - PORT=3000
+```
+
+### 🖥️ Opção 2: Testes Locais
+
+#### Backend
 
 ```bash
 cd backend
@@ -163,8 +294,30 @@ npm run test:coverage
 npm run test:manual
 ```
 
-### Visualizar Relatório de Cobertura
+### 📈 Visualizar Relatórios de Cobertura
 
+#### Em Docker (Container Fresco):
+```bash
+# Executar testes com cobertura em container fresco e salvar relatórios
+docker-compose run --rm -v $(pwd)/backend/coverage:/usr/src/app/coverage backend npm run test:coverage
+
+# Abrir relatório no navegador (relatórios salvos automaticamente)
+open backend/coverage/lcov-report/index.html
+```
+
+#### Em Docker (Container em Execução):
+```bash
+# Após executar testes com cobertura no Docker
+docker-compose exec backend npm run test:coverage
+
+# Copiar relatório para o host
+docker cp pokechat-backend:/usr/src/app/coverage/lcov-report ./backend/coverage/
+
+# Abrir relatório no navegador
+open backend/coverage/lcov-report/index.html
+```
+
+#### Localmente:
 Após executar `npm run test:coverage`, abra o arquivo:
 ```
 backend/coverage/lcov-report/index.html
@@ -261,6 +414,62 @@ docker-compose build backend
 
 # Executar comandos dentro do container
 docker-compose exec backend npm test
+
+# Executar testes com cobertura
+docker-compose exec backend npm run test:coverage
+
+# Acessar shell do container para debugging
+docker-compose exec backend sh
+
+# Ver logs específicos do backend
+docker-compose logs -f backend
+
+# Reiniciar apenas o backend
+docker-compose restart backend
+```
+
+### 🧪 Comandos Específicos para Testes em Docker
+
+#### Containers Frescos (Recomendado para CI/CD)
+```bash
+# Executar todos os testes em container fresco (inicia, testa, para)
+docker-compose run --rm backend npm test
+
+# Executar testes com cobertura e salvar relatórios automaticamente
+docker-compose run --rm -v $(pwd)/backend/coverage:/usr/src/app/coverage backend npm run test:coverage
+
+# Executar teste manual de integração em container fresco
+docker-compose run --rm backend npm run test:manual
+
+# Executar testes específicos com padrão de nome
+docker-compose run --rm backend npm test -- --testNamePattern="pokeapi"
+
+# Executar apenas testes de um arquivo específico
+docker-compose run --rm backend npm test tests/services/pokeapi.test.js
+
+# Verificar se as dependências de teste estão instaladas
+docker-compose run --rm backend npm list --depth=0
+```
+
+#### Containers em Execução (Para Desenvolvimento)
+```bash
+# Executar todos os testes no container em execução
+docker-compose exec backend npm test
+
+# Executar testes em modo watch (re-executa ao salvar arquivos)
+docker-compose exec backend npm run test:watch
+
+# Executar testes com cobertura no container em execução
+docker-compose exec backend npm run test:coverage
+
+# Copiar relatório de cobertura para o host
+docker cp pokechat-backend:/usr/src/app/coverage ./backend/
+
+# Executar teste manual de integração no container em execução
+docker-compose exec backend npm run test:manual
+
+# Acessar shell do container para debugging
+docker-compose exec backend sh
 ```
 
 ## 📝 Logs
