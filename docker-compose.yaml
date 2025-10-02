@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    container_name: pokechat-backend
+    ports:
+      - "3000:3000" # Exposes backend API
+      - "9229:9229" # Optional: For debugging
+    volumes:
+      - ./backend/logs:/usr/src/app/logs
+    environment:
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - PORT=3000
+
+  frontend:
+    build: ./frontend
+    container_name: pokechat-frontend
+    ports:
+      - "5173:5173" # Exposes Vite dev server
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3000/api/chat
+
+networks:
+  default:
+    driver: bridge
